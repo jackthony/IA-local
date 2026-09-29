@@ -1,0 +1,23 @@
+{
+  "fuente": "https://huggingface.co/datasets/Tobi-Bueck/customer-support-tickets/resolve/ddf1c81a5475992c4fa6752bf1e8b4e31f07bbeb/dataset-tickets-multi-lang-4-20k.csv",
+  "repo": "Tobi-Bueck/customer-support-tickets",
+  "commit": "ddf1c81a5475992c4fa6752bf1e8b4e31f07bbeb",
+  "archivo": "dataset-tickets-multi-lang-4-20k.csv",
+  "sha256": "9be3bf810584fe01e8e83383e83dfd33f4c3910938ecad03ef151da79d8f0635",
+  "bytes": 18799808,
+  "descargado": "2026-09-28",
+  "filas": 20000,
+  "licencia": "CC BY-NC 4.0 (solo evaluación, no producción)",
+  "idiomas": {
+    "de": 8077,
+    "en": 11923
+  },
+  "hallazgos": {
+    "formula": 15
+  },
+  "notas": [
+    "formula: 15 asuntos que empiezan con '-' (texto, no comandos); riesgo solo si se abre en Excel",
+    "prompt_injection: 1 falso positivo ('<user>' = marcador de anonimización), regla corregida",
+    "idiomas: solo en/de; el repo HF no contiene español (verificado vía API del visor)"
+  ]
+}

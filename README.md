@@ -1,0 +1,143 @@
+# IA-local — Lab de agentes, A2A y orquestación con modelos locales
+
+Stack: **Ollama** (CPU) + **Microsoft Agent Framework** (Python) + **A2A SDK**.
+El cliente es OpenAI-compatible (`labs/common.py`): el mismo código corre contra Ollama local,
+vLLM on-prem o Azure/OpenAI con solo cambiar variables de entorno.
+
+## Setup en macOS (MacBook)
+
+```bash
+# 1. Herramientas (instaladores oficiales; en Apple Silicon Ollama usa la GPU vía Metal: mucho más rápido que CPU)
+brew install uv gh            # o: https://docs.astral.sh/uv/  ·  https://cli.github.com/
+brew install --cask ollama    # o la app oficial de https://ollama.com/download
+# 2. Repo privado (autenticado con la cuenta dueña del repo)
+gh auth login
+gh repo clone jackthony/IA-local && cd IA-local
+# 3. Dependencias EXACTAS del lock (hashes verificados) y modelos
+uv sync --locked
+ollama pull qwen3:4b-instruct
+ollama pull qwen3:8b          # opcional (manager de Magentic / cascada)
+# 4. Verificar: tests deterministas (sin LLM) + escáner de secretos
+uv run python scripts/escanear_secretos.py
+uv run python jev/test_jev.py
+```
+
+Datos: el repo NO trae datasets (licencias y peso). Se descargan verificados por SHA-256:
+`uv run python jev/ingesta.py bitext` (y `tickets`). La calibración `data/calibracion-bitext-demo.json`
+sí viene versionada (sin PII), así que los labs 10 y 11 funcionan tras clonar.
+
+## Setup en Windows (equipo original)
+
+```powershell
+uv sync --locked
+ollama pull qwen3:4b-instruct
+```
+
+| Variable       | Default                      | Prod (ejemplo)                    |
+|----------------|------------------------------|-----------------------------------|
+| `LLM_BASE_URL` | `http://localhost:11434/v1`  | `http://vllm.interno:8000/v1`     |
+| `LLM_MODEL`    | `qwen3:4b-instruct`          | `Qwen/Qwen3-32B`                  |
+| `LLM_API_KEY`  | `ollama`                     | secreto del gateway               |
+| `A2A_URL`      | `http://localhost:5001/`     | URL pública del agente            |
+
+Modelos: `qwen3:4b-instruct` (rápido, default) · `qwen3:8b` (mejor razonamiento, ~2x más lento).
+Evita `qwen3:4b` (variante *thinking-only*: razona siempre, ~5x más lento en CPU).
+
+## Labs
+
+| # | Patrón | Comando | Tiempo CPU |
+|---|--------|---------|-----------|
+| 01 | Agente + tools | `uv run python labs/01_agent_tools.py` | ~10 s |
+| 02 | Secuencial + concurrente (fan-out) | `uv run python labs/02_sequential_concurrent.py` | ~80 s |
+| 03 | Handoff (triage → especialistas) | `uv run python labs/03_handoff.py` | ~45 s |
+| 04 | Servidor A2A (Agent Card + JSON-RPC) | `uv run uvicorn --app-dir labs 04_a2a_server:app --port 5001` | — |
+| 05 | Orquestador → agente remoto vía A2A | `uv run python labs/05_a2a_orchestrator.py` (con 04 corriendo) | ~40 s |
+| 06 | Group chat: selector round-robin vs director LLM | `uv run python labs/06_group_chat.py` | ~5 min (A ~100 s, B ~190 s) |
+| 07 | Magentic-One: manager planifica, delega, replanifica | `uv run python labs/07_magentic.py` | ~18 min ⚠️ |
+| 08 | Servidor MCP `empresa` (sistemas de negocio, stdio) | lo lanza el lab 09 como subproceso | — |
+| 09 | Agentes comparten MCP con mínimo privilegio + `ExigeTool` | `uv run python labs/09_mcp_agents.py` | ~45 s |
+| 10 | Router Jev (System 1) + especialistas (System 2) + cola humana | `uv run python labs/10_router_jev.py` | ~1 min |
+| 11 | Aprobación humana reanudable: revisión de ruteo + aprobación de reembolsos, checkpoints sellados | `uv run python labs/11_hitl_router.py iniciar` → `revisar` → `responder <id> '<json>'` (o `supervisor-demo`) | ~1 min + humano |
+
+Agent Card: http://localhost:5001/.well-known/agent-card.json
+
+Tests deterministas (sin LLM): `uv run python labs/test_divisas.py` · `uv run python labs/test_orquestacion.py` ·
+`uv run python labs/test_mcp.py` (protocolo MCP real) · `uv run python labs/test_router.py` · `uv run python labs/test_hitl.py`
+
+Datos de negocio: fuente única en `labs/empresa.py` (la usan el servidor MCP y los labs 04/07).
+
+## Lecciones ya encontradas
+
+- **LLM pequeño + aritmética = alucinación.** El agente `divisas` dijo 250 USD ≈ 39,000 PEN. Fix: tool
+  determinista `convertir` (ver `openspec/specs/divisas`). Regla: datos y cálculos, siempre en tools.
+- **Handoff en malla hace ping-pong** con modelos chicos. Usa estrella (`add_handoff(triage, [...])`),
+  `turn_limits` y `termination_condition`.
+- **Group chat rompe backends estrictos**: el historial compartido trae varios `assistant` seguidos y
+  Ollama responde 400 "Cannot have 2 or more assistant messages at the end of the list". Fix:
+  `otros_como_user` en `common.py` envía los mensajes de otros agentes como `user` `[autor]: texto`.
+- **Condiciones de término frágiles**: el modelo escribe `**Veredicto:**`, no `VEREDICTO:`. Normaliza
+  (mayúsculas, sin markdown) y deja siempre `max_rounds` como red de seguridad.
+- **Modelos híbridos (qwen3:8b) razonan por defecto**: `default_options={"reasoning_effort": "none"}`
+  baja de ~100 s a ~5 s por llamada en CPU.
+- **Estructura en código, contenido en el LLM.** Un 4B no respeta reglas de estado en el prompt
+  ("si ya hablaste, cierra") y el director LLM de group chat devolvía `terminate=true` en la ronda 0.
+  El selector fija el orden y la condición de término decide el final; el LLM solo aporta contenido.
+  También deriva de rol (el "optimista" abrió con "No"): refuerza la postura en el prompt.
+- **Debate adversarial fabrica evidencia.** Con roles fijos, los agentes inventan estadísticas y fuentes
+  ("30 % según Gartner", "CO₂ de 1000 autos") para ganar. En prod: darles datos vía tools/MCP/RAG y un
+  verificador; el prompt "no inventes" no basta en modelos chicos.
+- **Magentic es el patrón más caro**: ~5 llamadas largas del manager por tarea. En esta CPU ~18 min
+  (4B) / ~20 min (8B), mismo resultado correcto. Úsalo para tareas abiertas multi-paso; si el flujo es
+  conocido, secuencial/handoff cuesta 10–20x menos. Para iterar sobre él, apunta `LLM_BASE_URL` a GPU/cloud.
+- **Restringir tools no restringe al modelo.** El `analista` no tenía `convertir` y aun así convirtió
+  en texto con una tasa inventada; `finanzas` copió esa cifra en vez de usar su tool. Los agentes
+  confían en lo que dice el agente anterior.
+- **Ollama ignora `tool_choice`** (auto/required/función: mismo resultado, medido). La obligación va en
+  código: middleware `ExigeTool` en `common.py` verifica el `function_call` y reintenta.
+- **Router Jev (lab 10)**: Jev decide en ~1.3 s (mediana) con confianza calibrada y el código rutea;
+  el especialista tarda ~8 s. De 8 mensajes: 5 auto (todos correctos), 3 a humano: "cancel my order"
+  (ORDER 0.52 vs CANCEL: la frontera ambigua conocida), uno ambiguo, y el prompt injection. Jev le dio
+  ACCOUNT 0.97 al ataque: **sin el detector habría llegado a un agente**. Defensa en profundidad: salida
+  acotada de Jev + detector + agentes sin tools sensibles + humano.
+- **La anonimización tiene costo**: el especialista respondió "envíe el detalle a [EMAIL]". En prod,
+  guarda el mapa marcador → valor fuera del modelo y rehidrata la respuesta en código, o instruye al
+  agente a no repetir marcadores.
+- **HITL reanudable (lab 11)**: `request_info` pausa el workflow, el checkpoint queda en disco y otro
+  proceso lo reanuda con la decisión humana (probado: iniciar → revisar → responder en 3 procesos).
+- **Los checkpoints del framework llevan pickle** (restringido) incluso si solo pasas dicts: se sellan con
+  HMAC-SHA256 (clave en `~/.ia-local/hitl.key`, fuera del repo) y un sello nunca se reescribe. Probado:
+  un byte alterado → "sello inválido, no se reanuda", sin ejecutar nada.
+- **El LLM propone, el humano aprueba, el código ejecuta**: `emitir_reembolso` tiene
+  `approval_mode="always_require"`; el framework no lo ejecuta, devuelve los argumentos exactos para
+  aprobar; tras aprobar, el código lo ejecuta con esos argumentos y aplica política (S/ 900 → rechazado).
+- **Un prompt puede inducir la fuga que intentas evitar**: decir "si ves [EMAIL_1], úsalo" hizo que el
+  modelo inventara "[EMAIL_1]" en un caso sin PII. Fix: no mencionar marcadores + `limpiar_marcadores`
+  como última barrera. PII solo en una bóveda por caso, borrada al entregar (verificado: 0 apariciones
+  del email en checkpoints, cola, correcciones).
+- `agent-framework-ollama` (beta) falla en handoff (`allow_multiple_tool_calls`); por eso se usa el
+  endpoint OpenAI-compatible de Ollama.
+
+## Roadmap
+
+1. ~~Agente+tools, secuencial, concurrente, handoff, A2A~~ ✅
+2. ~~Group chat / Magentic~~ ✅
+3. ~~MCP server como tool compartido entre agentes~~ ✅
+3b. ~~Proyecto "Jev local": decisiones tipadas con probabilidad calibrada~~ ✅ (ver `jev/README.md`)
+4. ~~Human-in-the-loop (aprobación de tools) + checkpointing~~ ✅ (lab 11)
+5. Producción: Docker Compose (un contenedor por agente A2A), auth en A2A, OpenTelemetry → Aspire/Jaeger, evals
+
+## Auditoría zero trust de alternativas open source a Jev (2026-09-28, solo remota)
+
+Método: metadatos y búsquedas del lado del servidor (GitHub API/code search, PyPI Integrity, OSV, HF API).
+Ningún código de terceros se ejecutó ni quedó en disco.
+
+| | Kev (jaredpalmer) | AnyJev ("nokia-applied-research") |
+|---|---|---|
+| Identidad | ✅ cuenta 2013, 10.6k seguidores | 🚩 org creada 2026-08-03, no verificada, 2 contribuidores |
+| Commits firmados | ✅ 30/30 | 🚩 0/30 |
+| PyPI | 🚩 `kev` en PyPI es OTRO paquete (2016): instalar solo desde git + commit fijo | ✅ attestation PEP 740 desde el repo |
+| Deserialización | ⚠️ `head.pt` (pickle) con `torch.load` sin `weights_only` (mitigado por torch>=2.6) | ✅ heads en JSON |
+| CPU/Ollama | ❌ torch+transformers | ❌ HF/vLLM (`allowed_token_ids`) |
+
+Veredicto: ninguno listo para la empresa hoy (repos de <2 semanas, sin OpenSSF Scorecard). Siguiente paso
+si se quiere adoptar uno: prueba en sandbox desechable sin red (nivel 2), nunca en equipos de trabajo.

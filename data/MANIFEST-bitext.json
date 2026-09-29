@@ -1,0 +1,31 @@
+{
+  "fuente": "https://huggingface.co/datasets/bitext/Bitext-customer-support-llm-chatbot-training-dataset/resolve/430d1a89bd93bd1fa23c16f29dd53e73f0087443/Bitext_Sample_Customer_Support_Training_Dataset_27K_responses-v11.csv",
+  "repo": "bitext/Bitext-customer-support-llm-chatbot-training-dataset",
+  "commit": "430d1a89bd93bd1fa23c16f29dd53e73f0087443",
+  "archivo": "Bitext_Sample_Customer_Support_Training_Dataset_27K_responses-v11.csv",
+  "sha256": "6f81102b0100b97b8468eb04368033a23206bf1fde9d53500d5806ec1001a434",
+  "bytes": 19202474,
+  "descargado": "2026-09-28",
+  "filas": 26872,
+  "licencia": "CDLA-Sharing-1.0 (permite uso comercial; datos derivados con la misma licencia)",
+  "category": {
+    "ORDER": 3988,
+    "SHIPPING": 1970,
+    "CANCEL": 950,
+    "INVOICE": 1999,
+    "PAYMENT": 1998,
+    "REFUND": 2992,
+    "FEEDBACK": 1997,
+    "CONTACT": 1999,
+    "ACCOUNT": 5986,
+    "DELIVERY": 1994,
+    "SUBSCRIPTION": 999
+  },
+  "hallazgos": {
+    "prompt_injection": 13
+  },
+  "notas": [
+    "prompt_injection: 13 falsos positivos en la columna response (9 'You are now ready...', 4 'system prompt(s)...'); response no se usa como entrada del modelo",
+    "dataset híbrido sintético curado por lingüistas (README de Bitext); solo inglés"
+  ]
+}

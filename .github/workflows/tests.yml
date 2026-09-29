@@ -1,0 +1,34 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Zero trust: permisos mínimos y Actions fijadas por SHA de commit (no por tag mutable).
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+      - name: Dependencias exactas del lock (hashes)
+        run: uv sync --locked
+      - name: Escáner de secretos
+        run: uv run python scripts/escanear_secretos.py
+      - name: Tests deterministas (sin LLM)
+        run: |
+          for t in scripts/test_escanear_secretos.py labs/test_divisas.py labs/test_orquestacion.py \
+                   labs/test_mcp.py labs/test_router.py labs/test_hitl.py \
+                   jev/test_jev.py jev/test_datos.py jev/test_empresa.py; do
+            echo "== $t"
+            uv run python "$t"
+          done
+      - name: Auditoría de dependencias contra OSV
+        run: uv run python jev/auditar_deps.py

@@ -1,0 +1,17 @@
+[project]
+name = "ia-local"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "agent-framework-a2a>=1.0.0b260918",
+    "agent-framework-core>=1.19.0",
+    "agent-framework-openai>=1.14.4",
+    "agent-framework-orchestrations>=1.2.0",
+    "httpx<1",
+    "mcp>=1.10,<2",
+    "openai>=3.20.0",
+    "pydantic<2.14",
+    "sse-starlette>=3.4.11",
+    "starlette>=1.7.0",
+    "uvicorn>=0.54.0",
+]

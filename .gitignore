@@ -1,0 +1,18 @@
+# Entorno y caches
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+*.bak
+
+# Secretos locales (usar .env.example como plantilla)
+.env
+.env.*
+!.env.example
+
+# Datos: nunca datasets, colas de revisión humana, logs ni correcciones.
+# Solo se versionan artefactos sin PII: calibraciones y manifiestos de procedencia (SHA-256).
+data/**
+!data/
+!data/calibracion-*.json
+!data/MANIFEST-*.json
