@@ -26,6 +26,32 @@ Datos: el repo NO trae datasets (licencias y peso). Se descargan verificados por
 `uv run python jev/ingesta.py bitext` (y `tickets`). La calibración `data/calibracion-bitext-demo.json`
 sí viene versionada (sin PII), así que los labs 10 y 11 funcionan tras clonar.
 
+## Producción local con Docker (MacBook)
+
+Tres servicios endurecidos + Jaeger, con Ollama nativo en el host (GPU Metal):
+
+| Servicio | Qué hace | Puerto (solo 127.0.0.1) | Auth |
+|---|---|---|---|
+| `router-api` | Jev como servicio de decisión (`POST /v1/decidir`) | 8000 | `API_TOKEN` |
+| `a2a-divisas` | Agente A2A; usa el MCP por HTTP con su propio token | 5001 | `A2A_TOKEN` (card pública) |
+| `mcp-empresa` | MCP de sistemas de negocio (streamable HTTP, DNS rebinding activo) | interno | `MCP_TOKEN` |
+| `jaeger` | Trazas OpenTelemetry (sin contenido de mensajes) | 16686 | — |
+
+```bash
+ollama serve                                  # si la app de Ollama no está abierta
+uv sync --locked --extra prod
+uv run python scripts/generar_env.py          # .env con tokens nuevos (no se imprimen, no va a git)
+docker compose up -d --build                  # imágenes fijadas por digest, contenedores sin root ni capabilities
+uv run python servicios/cliente_demo.py       # decisión del router, A2A→MCP con token, y 401 sin token
+open http://127.0.0.1:16686                   # trazas en Jaeger
+docker compose down
+```
+
+Sin Docker (mismo código, útil para depurar): exporta los tokens de `.env` y corre
+`uv run python servicios/mcp_http.py`, `uv run uvicorn --app-dir servicios a2a_divisas:app --port 5001` y
+`uv run uvicorn --app-dir servicios router_api:app --port 8000` con `LLM_BASE_URL=http://localhost:11434/v1`.
+Probado así en Windows: 401 sin token en los tres, 421 con Host falso en el MCP, A2A→MCP → 937.5 soles.
+
 ## Setup en Windows (equipo original)
 
 ```powershell

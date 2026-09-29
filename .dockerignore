@@ -1,0 +1,10 @@
+# Lista blanca: solo lo necesario para correr. Nunca .env, datos, .git ni tests dentro de la imagen.
+**
+!pyproject.toml
+!uv.lock
+!labs/**
+!jev/**
+!servicios/**
+!data/calibracion-bitext-demo.json
+**/__pycache__/**
+**/test_*.py

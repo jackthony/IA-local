@@ -1,0 +1,64 @@
+# Stack de producción local (spec: openspec/changes/produccion).
+#   uv run python scripts/generar_env.py   # tokens en .env (fuera de git)
+#   docker compose up -d --build
+#   uv run python servicios/cliente_demo.py
+# Ollama corre en el HOST (en Mac usa GPU Metal); los contenedores lo alcanzan por host.docker.internal.
+name: ia-local
+
+x-endurecido: &endurecido
+  build: .
+  image: ia-local:prod
+  read_only: true
+  tmpfs: ["/tmp"]
+  cap_drop: ["ALL"]
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+  extra_hosts: ["host.docker.internal:host-gateway"]
+  networks: [interna]
+
+x-otel: &otel
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+  OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+
+services:
+  mcp-empresa:
+    <<: *endurecido
+    command: ["python", "servicios/mcp_http.py"]
+    environment:
+      <<: *otel
+      MCP_TOKEN: "${MCP_TOKEN:?falta .env - ejecuta: uv run python scripts/generar_env.py}"
+    # sin puertos publicados: solo accesible dentro de la red interna
+
+  a2a-divisas:
+    <<: *endurecido
+    command: ["uvicorn", "--app-dir", "servicios", "a2a_divisas:app", "--host", "0.0.0.0", "--port", "5001"]
+    environment:
+      <<: *otel
+      A2A_TOKEN: ${A2A_TOKEN:?falta .env}
+      MCP_TOKEN: ${MCP_TOKEN:?falta .env}
+      MCP_URL: http://mcp-empresa:8001/mcp
+      A2A_URL: http://127.0.0.1:5001/
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+      LLM_MODEL: ${LLM_MODEL:-qwen3:4b-instruct}
+    ports: ["127.0.0.1:5001:5001"]
+    depends_on: [mcp-empresa]
+
+  router-api:
+    <<: *endurecido
+    command: ["uvicorn", "--app-dir", "servicios", "router_api:app", "--host", "0.0.0.0", "--port", "8000"]
+    environment:
+      <<: *otel
+      API_TOKEN: ${API_TOKEN:?falta .env}
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:11434/v1}
+    ports: ["127.0.0.1:8000:8000"]
+
+  jaeger:
+    image: jaegertracing/jaeger:2.21.0@sha256:3d0ac795ff98aa04d1be04311d2dac6c25b4bfc8322dc02e53bc5b170c5018c3
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    restart: unless-stopped
+    ports: ["127.0.0.1:16686:16686"]   # UI de trazas solo en localhost
+    networks: [interna]
+
+networks:
+  interna: {}

@@ -10,9 +10,11 @@ __pycache__/
 .env.*
 !.env.example
 
-# Datos: nunca datasets, colas de revisión humana, logs ni correcciones.
-# Solo se versionan artefactos sin PII: calibraciones y manifiestos de procedencia (SHA-256).
+# Datos: nunca colas de revisión humana, logs ni correcciones (estado de ejecución).
+# Se versionan: datasets públicos (con licencia y manifiesto SHA-256), calibraciones y manifiestos.
 data/**
 !data/
+!data/*.csv
+!data/LICENCIAS.md
 !data/calibracion-*.json
 !data/MANIFEST-*.json
