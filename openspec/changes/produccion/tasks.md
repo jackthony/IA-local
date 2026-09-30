@@ -9,7 +9,11 @@
 ## 3. Contenedores
 - [x] 3.1 Dockerfile + compose.yaml endurecidos (digests); `docker compose config` válido
 - [x] 3.2a Prueba sin Docker en Windows: 401 x3, 421 Host falso, router ok, A2A->MCP 937.5
-- [ ] 3.2b Build + up + cliente_demo + trazas en Jaeger — PENDIENTE en la MacBook (Docker sin permisos en Windows)
+- [x] 3.2b MacBook (M5 Pro, Docker Desktop 29.7.2, Ollama Metal): build + up; cliente_demo en 3.4 s: 401 sin token
+      (router y A2A), router PAYMENT 0.93 auto / ORDER 0.61 humano / injection -> humano, A2A->MCP 937.5;
+      dentro de la red: MCP 401 sin token, 421 Host falso; uid 10001, FS solo lectura, sin capabilities,
+      puertos solo 127.0.0.1. Trazas en Jaeger (router-api, a2a-divisas con tools/call al MCP) sin contenido
+      de mensajes. Jaeger pasó a `read_only` + tmpfs (el requisito "todos los servicios" no lo cumplía)
 
 ## 4. Cierre
 - [x] 4.1 CI (tests servicios, runner ubuntu-24.04), README producción, datasets con LICENCIAS.md
