@@ -147,6 +147,11 @@ Datos de negocio: fuente única en `labs/empresa.py` (la usan el servidor MCP y 
   modelo inventara "[EMAIL_1]" en un caso sin PII. Fix: no mencionar marcadores + `limpiar_marcadores`
   como última barrera. PII solo en una bóveda por caso, borrada al entregar (verificado: 0 apariciones
   del email en checkpoints, cola, correcciones).
+- **Sellar por glob legitima lo ajeno; firmar el checkpoint no firma lo que ve el humano.** Revisión del
+  2026-09-30 (`openspec/changes/endurecer-hitl`): un checkpoint plantado quedaba sellado en la siguiente
+  corrida, la cola sin firma mostraba S/ 45 mientras se pagaban S/ 450, una caída tras pagar permitía pagar
+  dos veces, y un zero-width o un salto de línea evadía el detector de prompt injection. Fix: se sella cada
+  checkpoint al guardarlo, la cola va firmada, el reembolso es idempotente y el detector normaliza el texto.
 - `agent-framework-ollama` (beta) falla en handoff (`allow_multiple_tool_calls`); por eso se usa el
   endpoint OpenAI-compatible de Ollama.
 

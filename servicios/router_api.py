@@ -20,7 +20,6 @@ from telemetria import configurar  # noqa: E402
 
 configurar("router-api")
 from evaluar_empresa import anonimizar  # noqa: E402
-from ingesta import hallazgos  # noqa: E402
 from jev import Choice, Jev  # noqa: E402
 
 r10 = importlib.import_module("10_router_jev")
@@ -44,7 +43,7 @@ async def decidir(request: Request) -> JSONResponse:
         d = await JEV.preguntar(anonimizar(msg), CAL["pregunta"], TIPO)
         top2 = sorted(d.probs, key=d.probs.get, reverse=True)[:2]
         destino, motivo = r10.decidir_ruta(d.valor, d.confianza, CAL["umbrales"]["0.05"], r10.ESPECIALISTAS,
-                                           sospechoso="prompt_injection" in hallazgos(msg))
+                                           sospechoso=r10.es_sospechoso(msg))
         span.set_attributes({"jev.categoria": d.valor, "jev.confianza": round(d.confianza, 3),
                              "ruta.destino": destino, "ruta.motivo": motivo})
     return JSONResponse({"categoria": d.valor, "confianza": round(d.confianza, 3), "top2": top2,

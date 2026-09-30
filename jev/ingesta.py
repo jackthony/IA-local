@@ -18,6 +18,7 @@ import os
 import random
 import re
 import stat
+import unicodedata
 import urllib.request
 from pathlib import Path
 
@@ -45,7 +46,7 @@ DATA = Path(__file__).parent.parent / "data"
 REQUERIDAS = FUENTES["tickets"]["requeridas"]
 
 INYECCION = re.compile(
-    r"ignore (all |any )?(the )?(previous|prior|above) (instructions|prompts)|disregard (all )?(previous|prior)"
+    r"ignore (all |any )?(the )?(previous|prior|above|earlier) (instructions|prompts)|disregard (all )?(previous|prior)"
     r"|ignora (todas )?(las )?instrucciones|olvida (todas )?(tus|las) instrucciones|system prompt|you are now"
     r"|ahora eres|</?(system|assistant)>", re.IGNORECASE)  # <user> no: marcador de anonimización del dataset
 # Rangos construidos con chr(): nunca caracteres invisibles literales en el fuente (Trojan Source).
@@ -61,11 +62,20 @@ def verificar(datos: bytes, sha256: str, max_bytes: int) -> None:
         raise ValueError(f"SHA-256 no coincide: {real} != {sha256}")
 
 
+def normalizar(texto: str) -> str:
+    """Forma canónica para el detector: sin caracteres de formato (Cf), NFKC y espacios colapsados.
+
+    Medido: un zero-width entre "Ignore" y "all", o un salto de línea entre palabras, evadía el patrón.
+    """
+    sin_formato = "".join(c for c in texto if unicodedata.category(c) != "Cf")
+    return re.sub(r"\s+", " ", unicodedata.normalize("NFKC", sin_formato))
+
+
 def hallazgos(celda: str) -> list[str]:
     h = []
     if celda[:1] in ("=", "+", "-", "@", "\t", "\r"):
         h.append("formula")
-    if INYECCION.search(celda):
+    if INYECCION.search(normalizar(celda)):
         h.append("prompt_injection")
     if INVISIBLE.search(celda):
         h.append("unicode_invisible")
