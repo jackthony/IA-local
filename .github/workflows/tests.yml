@@ -24,7 +24,7 @@ jobs:
         run: uv run python scripts/escanear_secretos.py
       - name: Tests deterministas (sin LLM)
         run: |
-          for t in scripts/test_escanear_secretos.py labs/test_divisas.py labs/test_orquestacion.py \
+          for t in scripts/test_escanear_secretos.py scripts/test_inventario.py labs/test_divisas.py labs/test_orquestacion.py \
                    labs/test_mcp.py labs/test_router.py labs/test_hitl.py \
                    jev/test_jev.py jev/test_datos.py jev/test_empresa.py servicios/test_servicios.py; do
             echo "== $t"

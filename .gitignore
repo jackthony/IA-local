@@ -5,6 +5,9 @@ __pycache__/
 .DS_Store
 *.bak
 
+# Checkpoints del prototipo de experimentos/
+experimentos/proto_ckpt/
+
 # Secretos locales (usar .env.example como plantilla)
 .env
 .env.*

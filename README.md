@@ -1,5 +1,9 @@
 # IA-local — Lab de agentes, A2A y orquestación con modelos locales
 
+📐 **Empieza por [ARQUITECTURA.md](ARQUITECTURA.md)** (mapa, credenciales, orden de carpetas y siguiente
+nivel en Mac) · 📋 [INVENTARIO.md](INVENTARIO.md) (se regenera por máquina) · 🧠 [modelos.json](modelos.json)
+(modelos por digest) · 🧪 [experimentos/](experimentos/) (cómo se descubrió cada decisión)
+
 Stack: **Ollama** (CPU) + **Microsoft Agent Framework** (Python) + **A2A SDK**.
 El cliente es OpenAI-compatible (`labs/common.py`): el mismo código corre contra Ollama local,
 vLLM on-prem o Azure/OpenAI con solo cambiar variables de entorno.
@@ -20,6 +24,9 @@ ollama pull qwen3:8b          # opcional (manager de Magentic / cascada)
 # 4. Verificar: tests deterministas (sin LLM) + escáner de secretos
 uv run python scripts/escanear_secretos.py
 uv run python jev/test_jev.py
+# 5. Inventario de TU máquina: modelos vs modelos.json (digest), otros almacenes (tus otros proyectos),
+#    candidatos que caben en tu RAM, credenciales (solo nombres) -> INVENTARIO.md
+uv run python scripts/inventario.py
 ```
 
 Datos: el repo NO trae datasets (licencias y peso). Se descargan verificados por SHA-256:
