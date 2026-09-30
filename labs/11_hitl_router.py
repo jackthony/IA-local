@@ -3,8 +3,9 @@
 Dos puntos de aprobación humana con `request_info` + checkpoints en disco (el proceso puede cerrarse):
   1. revisión de ruteo cuando Jev duda o el mensaje es sospechoso;
   2. aprobación de `emitir_reembolso`: el LLM propone, el humano aprueba los argumentos exactos, el código ejecuta.
-Zero trust: checkpoints sellados con HMAC (el framework usa pickle restringido dentro), PII solo en una bóveda
-local por caso (nunca en checkpoints/cola/logs), política de montos aplicada en código aunque haya aprobación.
+Zero trust: checkpoints sellados con HMAC al guardarlos (el framework usa pickle restringido dentro), cola humana
+firmada (lo que el supervisor ve es lo que se ejecuta), reembolso idempotente, PII solo en una bóveda local por
+caso (nunca en checkpoints/cola/logs), política de montos aplicada en código aunque haya aprobación.
 
   uv run python labs/11_hitl_router.py iniciar            # procesa mensajes; lo dudoso queda en cola
   uv run python labs/11_hitl_router.py revisar            # lista la cola humana
@@ -24,14 +25,12 @@ import shutil
 import stat
 import sys
 from pathlib import Path
-from typing import Annotated
 
 RAIZ = Path(__file__).parent.parent
 sys.path.insert(0, str(RAIZ / "jev"))
-from agent_framework import (Executor, FileCheckpointStorage, WorkflowBuilder, WorkflowContext,  # noqa: E402
-                             handler, response_handler, tool)
+from agent_framework import (Executor, FileCheckpointStorage, WorkflowBuilder,  # noqa: E402
+                             WorkflowCheckpointException, WorkflowContext, handler, response_handler, tool)
 from evaluar_empresa import MARCADOR, anonimizar_con_mapa, rehidratar  # noqa: E402
-from ingesta import hallazgos  # noqa: E402
 from jev import Choice, Jev  # noqa: E402
 
 from common import agent  # noqa: E402
@@ -57,27 +56,47 @@ def _hmac(datos: bytes, clave: bytes) -> str:
     return hmac.new(clave, datos, hashlib.sha256).hexdigest()
 
 
-def sellar(directorio: Path, clave: bytes) -> None:
-    """Sella solo checkpoints nuevos: un sello existente nunca se reescribe.
+def _sellos(directorio: Path) -> dict[str, str]:
+    ruta = directorio / "SELLOS.hmac"
+    return json.loads(ruta.read_text(encoding="utf-8")) if ruta.exists() else {}
 
+
+def sellar(directorio: Path, checkpoint_id: str, clave: bytes) -> None:
+    """Sella UN checkpoint que este proceso acaba de escribir; un sello existente nunca se reescribe.
+
+    Nunca por glob: sellar todo *.json sin sello legitimaba un archivo plantado en el directorio.
     SELLOS.hmac y no .json: el framework intenta leer todo *.json del directorio como checkpoint.
     """
-    ruta = directorio / "SELLOS.hmac"
-    sellos = json.loads(ruta.read_text(encoding="utf-8")) if ruta.exists() else {}
-    for p in sorted(directorio.glob("*.json")):
-        if p.name not in sellos:
-            sellos[p.name] = _hmac(p.read_bytes(), clave)
-    ruta.write_text(json.dumps(sellos, indent=1), encoding="utf-8")
+    sellos, nombre = _sellos(directorio), f"{checkpoint_id}.json"
+    if nombre not in sellos:
+        sellos[nombre] = _hmac((directorio / nombre).read_bytes(), clave)
+        (directorio / "SELLOS.hmac").write_text(json.dumps(sellos, indent=1), encoding="utf-8")
 
 
 def verificar_checkpoint(directorio: Path, checkpoint_id: str, clave: bytes) -> None:
-    ruta = directorio / "SELLOS.hmac"
-    sellos = json.loads(ruta.read_text(encoding="utf-8")) if ruta.exists() else {}
-    nombre = f"{checkpoint_id}.json"
+    sellos, nombre = _sellos(directorio), f"{checkpoint_id}.json"
     if nombre not in sellos:
         raise ValueError(f"checkpoint {checkpoint_id} sin sello: no se reanuda")
     if not hmac.compare_digest(sellos[nombre], _hmac((directorio / nombre).read_bytes(), clave)):
         raise ValueError(f"sello inválido en {checkpoint_id}: checkpoint manipulado, no se reanuda")
+
+
+def _canonico(request_id: str, datos: dict) -> bytes:
+    return json.dumps([request_id, datos], sort_keys=True, ensure_ascii=False).encode()
+
+
+def firmar_entrada(request_id: str, datos: dict, clave: bytes) -> dict:
+    """La cola es lo que el supervisor ve al decidir: se firma (ligada a su request_id) con la misma clave."""
+    return {**datos, "sello": _hmac(_canonico(request_id, datos), clave)}
+
+
+def verificar_entrada(request_id: str, entrada: dict, clave: bytes) -> dict:
+    """Devuelve la entrada sin el sello; `ValueError` si fue editada, no tiene firma o es de otra solicitud."""
+    datos = {k: v for k, v in entrada.items() if k != "sello"}
+    if not hmac.compare_digest(str(entrada.get("sello", "")), _hmac(_canonico(request_id, datos), clave)):
+        raise ValueError(f"entrada {request_id[:8]} de la cola sin sello válido: manipulada, "
+                         "no se muestra ni se reanuda")
+    return datos
 
 
 def limpiar_marcadores(texto: str) -> tuple[str, int]:
@@ -117,15 +136,73 @@ def guardar_cola(cola: dict) -> None:
     PENDIENTES.write_text(json.dumps(cola, indent=1, ensure_ascii=False), encoding="utf-8")
 
 
-def ejecutar_reembolso(monto: float, motivo: str) -> str:
-    """La acción real (aquí, un ledger local). Solo la invoca el código tras aprobación + política."""
+def reembolso_registrado(operacion: str) -> dict | None:
+    if not LEDGER.exists():
+        return None
+    for linea in LEDGER.read_text(encoding="utf-8").splitlines():
+        try:
+            registro = json.loads(linea)
+        except json.JSONDecodeError:
+            continue  # línea truncada por una caída: esa escritura no se completó
+        if registro.get("operacion") == operacion:
+            return registro
+    return None
+
+
+def ejecutar_reembolso(operacion: str, monto: float, motivo: str) -> str:
+    """La acción real (aquí, un ledger local). Solo la invoca el código tras aprobación + política.
+
+    Idempotente por `operacion` (caso + id de la tool call): si el proceso cae después de pagar y antes de
+    guardar la cola, responder otra vez reanuda el mismo checkpoint y NO paga dos veces.
+    ponytail: ledger escaneado. En prod, clave de idempotencia con restricción UNIQUE en el sistema de pagos.
+    """
+    previo = reembolso_registrado(operacion)
+    if previo:
+        return f"Reembolso de S/ {previo['monto']:.2f} ya emitido antes ({previo['motivo']})."
     with LEDGER.open("a", encoding="utf-8") as f:
-        f.write(json.dumps({"ts": datetime.datetime.now().isoformat(), "monto": monto, "motivo": motivo}) + "\n")
+        f.write(json.dumps({"ts": datetime.datetime.now().isoformat(), "operacion": operacion, "monto": monto,
+                            "motivo": motivo}, ensure_ascii=False) + "\n")
     return f"Reembolso de S/ {monto:.2f} emitido ({motivo})."
 
 
-emitir_reembolso = tool(ejecutar_reembolso, name="emitir_reembolso", approval_mode="always_require",
+def proponer_reembolso(monto: float, motivo: str) -> str:
+    """Firma que ve el LLM. Nunca paga: el framework devuelve la propuesta para aprobación humana."""
+    raise RuntimeError("emitir_reembolso solo se ejecuta en código, tras aprobación y política")
+
+
+emitir_reembolso = tool(proponer_reembolso, name="emitir_reembolso", approval_mode="always_require",
                         description="Emite un reembolso al cliente. Acción sensible: requiere aprobación.")
+
+
+class AlmacenSellado(FileCheckpointStorage):
+    """Checkpoints sellados al guardarse y verificados al leerse (también al listar).
+
+    Solo queda sellado lo que ESTE proceso escribió, y `get_latest` nunca deserializa un archivo ajeno.
+    """
+
+    def __init__(self, directorio: Path, clave: bytes) -> None:
+        super().__init__(directorio)
+        self._clave = clave
+
+    async def save(self, checkpoint):
+        checkpoint_id = await super().save(checkpoint)
+        sellar(self.storage_path, checkpoint_id, self._clave)
+        return checkpoint_id
+
+    async def load(self, checkpoint_id):
+        verificar_checkpoint(self.storage_path, checkpoint_id, self._clave)  # antes de deserializar
+        return await super().load(checkpoint_id)
+
+    async def list_checkpoints(self, *, workflow_name: str):
+        validos = []
+        for nombre in _sellos(self.storage_path):
+            try:
+                checkpoint = await self.load(nombre.removesuffix(".json"))
+            except (ValueError, OSError, WorkflowCheckpointException):
+                continue
+            if checkpoint.workflow_name == workflow_name:
+                validos.append(checkpoint)
+        return validos
 
 
 # ---------- workflow ----------
@@ -179,15 +256,17 @@ class Especialista(Executor):
             fc = pedidos[0].function_call
             args = json.loads(fc.arguments) if isinstance(fc.arguments, str) else dict(fc.arguments)
             await ctx.request_info({"tipo": "aprobacion", "caso": caso["caso"], "grupo": caso["grupo"],
-                                    "tool": fc.name, "argumentos": args}, dict)
+                                    "tool": fc.name, "argumentos": args,
+                                    "operacion": f"{caso['caso']}:{fc.call_id}"}, dict)
         else:
             await ctx.yield_output({"caso": caso["caso"], "estado": f"respondido por {caso['grupo']}", "respuesta": r.text})
 
     @response_handler
     async def aprobado(self, original: dict, respuesta: dict, ctx: WorkflowContext[dict, dict]) -> None:
-        ok, motivo = validar_reembolso(original["argumentos"])
+        args = original["argumentos"]
+        ok, motivo = validar_reembolso(args)
         if respuesta.get("aprobado") is True and original["tool"] == "emitir_reembolso" and ok:
-            res = ejecutar_reembolso(**original["argumentos"])  # exactamente lo aprobado
+            res = ejecutar_reembolso(original["operacion"], args["monto"], str(args.get("motivo", "")))  # lo aprobado
             await ctx.yield_output({"caso": original["caso"], "estado": "reembolso emitido", "respuesta": res})
         else:
             razon = motivo or "rechazado por supervisor"
@@ -195,7 +274,7 @@ class Especialista(Executor):
                                     "respuesta": "Un supervisor revisó tu solicitud; te contactaremos con el detalle."})
 
 
-def construir(storage: FileCheckpointStorage):
+def construir(storage: AlmacenSellado):
     cal = r10.cargar_calibracion(r10.CALIBRACION)
     tipo = Choice(tuple(cal["opciones"]), tuple(cal["descripciones"]) if cal.get("descripciones") else None)
     jev = Jev(cal["modelo"], t=cal["T"], rotulo=cal["rotulo"])
@@ -209,7 +288,7 @@ def construir(storage: FileCheckpointStorage):
             .add_edge(entrada, especialista).build())
 
 
-async def procesar(resultado, storage: FileCheckpointStorage, cola: dict) -> None:
+async def procesar(resultado, storage: AlmacenSellado, cola: dict) -> None:
     """Entrega salidas (rehidratadas) y registra en la cola las nuevas solicitudes humanas."""
     for out in resultado.get_outputs():
         bov = BOVEDA / f"{out['caso']}.json"
@@ -219,11 +298,10 @@ async def procesar(resultado, storage: FileCheckpointStorage, cola: dict) -> Non
             final, sueltos = limpiar_marcadores(rehidratar(out["respuesta"].strip(), mapa))
             print(f"    al cliente: {final[:240]}" + (f"  [⚠ {sueltos} marcador(es) sin resolver bloqueados]" if sueltos else ""))
         bov.unlink(missing_ok=True)  # PII fuera en cuanto se entrega
-    ultimo = await storage.get_latest(workflow_name=NOMBRE)
+    ultimo = await storage.get_latest(workflow_name=NOMBRE)  # solo ve checkpoints sellados por este almacén
     for e in resultado.get_request_info_events():
-        cola[e.request_id] = {"checkpoint": ultimo.checkpoint_id, **e.data}
+        cola[e.request_id] = firmar_entrada(e.request_id, {"checkpoint": ultimo.checkpoint_id, **e.data}, clave())
         print(f"  ⏸ caso {e.data['caso'][:8]} en cola humana [{e.data['tipo']}] id={e.request_id[:8]}")
-    sellar(CKPT, clave())
     guardar_cola(cola)
 
 
@@ -231,22 +309,22 @@ async def iniciar() -> None:
     shutil.rmtree(HITL, ignore_errors=True)
     for d in (CKPT, BOVEDA):
         d.mkdir(parents=True, exist_ok=True)
-    storage, cola = FileCheckpointStorage(CKPT), {}
+    storage, cola = AlmacenSellado(CKPT, clave()), {}
     for msg in MENSAJES:
         caso = os.urandom(8).hex()
         anon, mapa = anonimizar_con_mapa(msg)
         if mapa:
             (BOVEDA / f"{caso}.json").write_text(json.dumps(mapa), encoding="utf-8")
         print(f"> {anon}")
-        r = await construir(storage).run({"caso": caso, "mensaje": anon, "sospechoso": "prompt_injection" in hallazgos(msg)})
+        r = await construir(storage).run({"caso": caso, "mensaje": anon, "sospechoso": r10.es_sospechoso(msg)})
         await procesar(r, storage, cola)
 
 
 async def responder(request_id: str, respuesta: dict) -> None:
     cola = leer_cola()
-    entrada = cola.pop(request_id)
+    entrada = verificar_entrada(request_id, cola.pop(request_id), clave())  # la cola también es entrada no confiable
     verificar_checkpoint(CKPT, entrada["checkpoint"], clave())  # nada se reanuda sin sello válido
-    storage = FileCheckpointStorage(CKPT)
+    storage = AlmacenSellado(CKPT, clave())
     wf = construir(storage)
     await wf.run(checkpoint_id=entrada["checkpoint"], checkpoint_storage=storage)
     print(f"< respuesta humana a {entrada['tipo']} del caso {entrada['caso'][:8]}: {respuesta}")
@@ -271,7 +349,12 @@ async def main() -> None:
     if a.comando == "iniciar":
         await iniciar()
     elif a.comando == "revisar":
-        for rid, it in leer_cola().items():
+        for rid, firmada in leer_cola().items():
+            try:
+                it = verificar_entrada(rid, firmada, clave())  # se muestra solo lo que se ejecutaría
+            except ValueError as e:
+                print(f"⚠ {e}")
+                continue
             detalle = it.get("argumentos") or f"{it.get('mensaje')} | Jev {it.get('jev')} {it.get('confianza')} top2={it.get('sugerencias')}"
             print(f"{rid} [{it['tipo']}] {it.get('motivo', it.get('tool'))}: {detalle}")
     elif a.comando == "responder":

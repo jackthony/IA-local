@@ -67,6 +67,11 @@ def decidir_ruta(categoria: str, confianza: float, umbral: float, especialistas:
     return especialistas[categoria], "auto"
 
 
+def es_sospechoso(mensaje: str) -> bool:
+    """A cola humana si parece prompt injection o trae caracteres invisibles (la forma típica de evadir el patrón)."""
+    return bool({"prompt_injection", "unicode_invisible"} & set(hallazgos(mensaje)))
+
+
 def registro(mensaje: str, categoria: str, confianza: float, top2: list, destino: str, motivo: str, ms: int) -> dict:
     return {"ts": datetime.datetime.now(datetime.timezone.utc).isoformat(), "mensaje": anonimizar(mensaje),
             "categoria": categoria, "confianza": round(confianza, 3), "top2": top2, "destino": destino,
@@ -91,7 +96,7 @@ async def main() -> None:
             ms = int((time.perf_counter() - t0) * 1000)
             top2 = sorted(d.probs, key=d.probs.get, reverse=True)[:2]
             destino, motivo = decidir_ruta(d.valor, d.confianza, umbral, ESPECIALISTAS,
-                                           sospechoso="prompt_injection" in hallazgos(msg))
+                                           sospechoso=es_sospechoso(msg))
             log.write(json.dumps(registro(msg, d.valor, d.confianza, top2, destino, motivo, ms), ensure_ascii=False) + "\n")
             lat_jev.append(ms)
             rutas[destino] = rutas.get(destino, 0) + 1
