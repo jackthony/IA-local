@@ -8,8 +8,10 @@ import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from inventario import (comparar_modelos, inventario_credenciales, recomendar, render_credenciales,  # noqa: E402
-                        ruta_legible)
+import json  # noqa: E402
+
+from inventario import (RAIZ, comparar_modelos, inventario_credenciales, recomendar,  # noqa: E402
+                        render_credenciales, ruta_legible, validar_manifiesto)
 
 
 def test_comparar_modelos() -> None:
@@ -38,7 +40,18 @@ def test_recomendar() -> None:
     assert [c["nombre"] for c in recomendar(36, cs)] == ["m36", "m24"]
 
 
+def test_validar_manifiesto() -> None:
+    doc = json.loads((RAIZ / "modelos.json").read_text(encoding="utf-8"))
+    assert validar_manifiesto(doc) == []
+    roles = " ".join(m["rol"] for m in doc["modelos"])
+    assert all(r in roles for r in ("router", "agentes", "manager", "código", "embeddings"))
+    malo = {"modelos": [{"nombre": "a", "digest": "0123456789", "bytes": 1, "obligatorio": True, "rol": "x"},
+                        {"nombre": "a", "digest": "f" * 64, "bytes": 1, "obligatorio": False, "rol": "y"}]}
+    assert len(validar_manifiesto(malo)) == 2
+
+
 if __name__ == "__main__":
+    test_validar_manifiesto()
     test_recomendar()
     test_comparar_modelos()
     test_credenciales_sin_valores()

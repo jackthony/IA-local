@@ -59,6 +59,28 @@ def render_credenciales(filas: list[dict]) -> str:
                      [f"| {f['nombre']} | {f['archivo']} | {f['usa']} | {si(f['presente'])} | {si(f['fuerte'])} |" for f in filas])
 
 
+def validar_manifiesto(doc: dict) -> list[str]:
+    errores, nombres, digests = [], set(), set()
+    for m in doc.get("modelos", []):
+        n = m.get("nombre", "?")
+        d = str(m.get("digest", ""))
+        if len(d) != 64 or any(c not in "0123456789abcdef" for c in d):
+            errores.append(f"{n}: digest inválido")
+        if not isinstance(m.get("bytes"), int) or m["bytes"] <= 0:
+            errores.append(f"{n}: bytes inválido")
+        if not isinstance(m.get("obligatorio"), bool):
+            errores.append(f"{n}: obligatorio no es booleano")
+        if not str(m.get("rol", "")).strip():
+            errores.append(f"{n}: sin rol")
+        if n in nombres:
+            errores.append(f"{n}: nombre repetido")
+        if d in digests and len(d) == 64:
+            errores.append(f"{n}: digest repetido")
+        nombres.add(n)
+        digests.add(d)
+    return errores
+
+
 def recomendar(ram_gb: float, candidatos: list[dict]) -> list[dict]:
     return sorted((c for c in candidatos if c["ram_min_gb"] <= ram_gb), key=lambda c: -c["ram_min_gb"])
 
@@ -126,6 +148,9 @@ def herramienta(cmd: str) -> str:
 def main() -> int:
     import ingesta
     manif = json.loads((RAIZ / "modelos.json").read_text(encoding="utf-8"))
+    if errores := validar_manifiesto(manif):
+        print("modelos.json inválido:", errores)
+        return 1
     locales = modelos_locales()
     ram = ram_total()
     problemas, L = [], []
@@ -141,10 +166,10 @@ def main() -> int:
         problemas.append("Ollama no responde")
     else:
         cmp = comparar_modelos(manif["modelos"], locales)
-        L += ["| Modelo | Obligatorio | Tamaño | Estado | Uso |", "|---|---|---|---|---|"]
+        L += ["| Modelo | Rol | Obligatorio | Tamaño | Estado | Uso |", "|---|---|---|---|---|---|"]
         for m in manif["modelos"]:
             est = cmp["estados"][m["nombre"]]
-            L.append(f"| {m['nombre']} | {'sí' if m['obligatorio'] else 'no'} | {gb(m['bytes'])} | {est} | {m['uso']} |")
+            L.append(f"| {m['nombre']} | {m['rol']} | {'sí' if m['obligatorio'] else 'no'} | {gb(m['bytes'])} | {est} | {m['uso']} |")
             if m["obligatorio"] and est != "ok":
                 problemas.append(f"modelo {m['nombre']}: {est}")
         L += ["", f"Otros modelos locales (de otros proyectos): {', '.join(cmp['no_inventariado']) or 'ninguno'}", ""]

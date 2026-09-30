@@ -101,6 +101,17 @@ en el registro de Ollama (2026-09-29):
 | `qwen3:32b` | 20.2 GB | ≥48 GB | Máxima calidad local (denso, más lento) |
 | `qwen3-embedding:0.6b` | 0.6 GB | ≥8 GB | RAG: siguiente tema (grounding con documentos) |
 
+El set por rol ya está en `modelos.json` (opcionales, con digest): el inventario los verifica en la Mac.
+
+```bash
+ollama pull qwen3:4b-instruct      # router (Jev) — obligatorio, calibrado
+ollama pull qwen3:30b-a3b          # agentes especialistas  -> LLM_MODEL
+ollama pull gpt-oss:20b            # manager / razonamiento -> MANAGER_MODEL (o qwen3:32b)
+ollama pull qwen3-coder:30b        # agentes de código
+ollama pull qwen3-embedding:0.6b   # RAG
+uv run python scripts/inventario.py   # confirma digests == modelos.json
+```
+
 Cómo adoptarlos sin adivinar (el método de todo el proyecto):
 1. `ollama pull <modelo>` y agrégalo a `modelos.json` con su digest (lo ves en `ollama list`).
 2. Mide: `LLM_MODEL=<modelo> uv run python jev/eval_bitext.py` y `jev/evaluar_empresa.py` (exactitud,

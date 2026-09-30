@@ -9,10 +9,15 @@ Regenerar: `uv run python scripts/inventario.py`. Rutas con `~`; credenciales so
 
 ## Modelos (manifiesto `modelos.json`)
 
-| Modelo | Obligatorio | Tamaño | Estado | Uso |
-|---|---|---|---|---|
-| qwen3:4b-instruct | sí | 2.50 GB | ok | Default LLM_MODEL: agentes de labs 01-11, Jev (router, triage, evaluación) y servicios. |
-| qwen3:8b | no | 5.23 GB | ok | Opcional: manager de Magentic (MANAGER_MODEL), cascada y diagnóstico de Jev. Requiere reasoning_effort=none. |
+| Modelo | Rol | Obligatorio | Tamaño | Estado | Uso |
+|---|---|---|---|---|---|
+| qwen3:4b-instruct | router (Jev) y agentes por defecto | sí | 2.50 GB | ok | Default LLM_MODEL: agentes de labs 01-11, Jev (router, triage, evaluación) y servicios. |
+| qwen3:8b | manager Magentic / cascada Jev (equipos con poca RAM) | no | 5.23 GB | ok | Opcional: manager de Magentic (MANAGER_MODEL), cascada y diagnóstico de Jev. Requiere reasoning_effort=none. |
+| qwen3:30b-a3b | agentes especialistas (Mac) | no | 18.56 GB | falta | LLM_MODEL para agentes: MoE (3B activos), calidad ~30B a velocidad cercana a 4B. |
+| gpt-oss:20b | manager / razonamiento (Mac) | no | 13.79 GB | falta | MANAGER_MODEL del lab 07 (Magentic) y tareas de razonamiento. |
+| qwen3:32b | manager / razonamiento de máxima calidad (Mac) | no | 20.20 GB | falta | Alternativa densa a gpt-oss:20b; más lento, mejor calidad. |
+| qwen3-coder:30b | código (Mac) | no | 18.56 GB | falta | Agentes que programan (MoE). |
+| qwen3-embedding:0.6b | embeddings / RAG | no | 0.64 GB | falta | Siguiente tema: grounding con documentos. |
 
 Otros modelos locales (de otros proyectos): ninguno
 
@@ -26,7 +31,6 @@ Otros modelos locales (de otros proyectos): ninguno
 ### Candidatos que caben en 24 GB de RAM (medir con `jev/eval_bitext.py` antes de adoptar)
 
 - `qwen3:14b` (9.28 GB, ≥24 GB RAM): Siguiente escalón para agentes y Jev: más exactitud que 4B/8B.
-- `qwen3-embedding:0.6b` (0.64 GB, ≥8 GB RAM): Embeddings para RAG (siguiente tema: grounding con documentos).
 
 ## Datasets (verificados por SHA-256 contra su manifiesto)
 
@@ -65,7 +69,7 @@ Generar/rotar tokens: borra `.env` y ejecuta `uv run python scripts/generar_env.
 
 ## Proyecto
 
-- Labs: 11 · specs OpenSpec: 10 · changes archivados: 10 · suites de tests: 11
+- Labs: 11 · specs OpenSpec: 11 · changes archivados: 11 · suites de tests: 11
 - Tamaños: .venv 0.08 GB · data 0.04 GB
 - Paquetes Python en uv.lock: 68
 
