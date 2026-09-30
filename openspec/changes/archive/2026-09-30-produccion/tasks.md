@@ -17,4 +17,4 @@
 
 ## 4. Cierre
 - [x] 4.1 CI (tests servicios, runner ubuntu-24.04), README producción, datasets con LICENCIAS.md
-- [ ] 4.2 Commit + push (identidad noreply) y CI verde
+- [x] 4.2 Commit + push (identidad noreply) y CI verde (run 36690885256 en main, 26 s)

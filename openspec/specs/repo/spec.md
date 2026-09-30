@@ -24,12 +24,15 @@ SHALL recorrer los archivos que git publicaría y salir con código 1 si hay hal
 - **THEN** devuelve lista vacía
 
 ### Requirement: Nada sensible en el repo
-`.gitignore` SHALL excluir `.venv/`, `data/**` salvo `data/calibracion-*.json` y `data/MANIFEST-*.json`,
-`.env`, `*.bak`, `__pycache__/` y `.DS_Store`.
+El repo SHALL versionar los datasets públicos descargados (Bitext y tickets de Kaggle) junto con su
+manifiesto SHA-256 y `data/LICENCIAS.md` (atribución y términos), para usarlos en clases sin descargar.
+`.gitignore` SHALL seguir excluyendo `.env` (cada entorno genera sus tokens con `scripts/generar_env.py`),
+`.venv/`, el estado de ejecución (`data/hitl/`, `data/correcciones.jsonl`, `data/router-log.jsonl`),
+`*.bak`, `__pycache__/` y `.DS_Store`.
 
-#### Scenario: Cola humana y datasets fuera
-- **WHEN** se consulta `git check-ignore` para `data/hitl/pendientes.json`, `data/correcciones.jsonl` y el CSV de Bitext
-- **THEN** los tres están ignorados y `data/calibracion-bitext-demo.json` no
+#### Scenario: Qué se publica
+- **WHEN** se consulta `git check-ignore` para el CSV de Bitext, `.env`, `data/hitl/pendientes.json` y `data/correcciones.jsonl`
+- **THEN** el CSV NO está ignorado; `.env` y los dos archivos de estado sí
 
 ### Requirement: CI verificable
 El workflow SHALL correr en push y pull request con `permissions: contents: read`, Actions fijadas por

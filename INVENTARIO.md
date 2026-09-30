@@ -69,7 +69,7 @@ Generar/rotar tokens: borra `.env` y ejecuta `uv run python scripts/generar_env.
 
 ## Proyecto
 
-- Labs: 11 · specs OpenSpec: 11 · changes archivados: 12 · suites de tests: 11
+- Labs: 11 · specs OpenSpec: 12 · changes archivados: 13 · suites de tests: 11
 - Tamaños: .venv 0.06 GB · data 0.04 GB
 - Paquetes Python en uv.lock: 68
 
