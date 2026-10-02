@@ -7,6 +7,6 @@
 - [x] 2.2 `LICENSE` (MIT) y sección de licencias en el README; el README deja de decir "repo privado"
 
 ## 3. Verificación
-- [ ] 3.1 Gate completo y CI verde
+- [x] 3.1 Gate completo y CI verde (e333e97)
 - [x] 3.2 Con el dominio real configurado localmente, el escáner bloquea un correo corporativo (sin commitearlo): con IA_DOMINIOS_CORPORATIVOS el escáner devuelve correo_corporativo
-- [ ] 3.3 `git grep` del dominio real en el árbol: 0 resultados
+- [x] 3.3 `git grep` del dominio real en el árbol: 0 resultados (tras sincronizar la spec)
