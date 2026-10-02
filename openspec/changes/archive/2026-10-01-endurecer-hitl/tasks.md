@@ -14,4 +14,4 @@
   `responder`; checkpoint plantado nunca sellado; caída simulada tras pagar -> "ya emitido antes", 1 línea en el
   ledger; supervisor-demo (ORDER, S/ 900 bloqueado, ataque descartado); email ausente en data/
 - [x] 3.3 Sin falsos positivos nuevos en los datasets versionados (Bitext 13 -> 13, tickets 0 -> 0)
-- [ ] 3.4 Re-correr labs 10 y 11 con Ollama real en la MacBook
+- [x] 3.4 Labs 10 y 11 con Ollama real en la MacBook (Metal): Jev mediana 76 ms; injection -> humano; lab 11 iniciar -> revisar -> supervisor-demo (S/ 50 emitido, S/ 900 bloqueado por política, ataque descartado); ningún correo en data/
