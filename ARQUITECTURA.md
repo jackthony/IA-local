@@ -1,6 +1,6 @@
 # Arquitectura, inventario y orden — guía para aprender
 
-Un solo repositorio (`jackthony/IA-local`, privado) con tres áreas que construyen una encima de otra.
+Un solo repositorio (`jackthony/IA-local`, público) con tres áreas que construyen una encima de otra.
 Inventario vivo de la máquina: `uv run python scripts/inventario.py` → `INVENTARIO.md`.
 
 ```
@@ -55,8 +55,9 @@ con modelos chicos, y se movió a código (selector, `ExigeTool`, `umbral_auto`,
 | Credencial | Dónde | Para qué | Rotación |
 |---|---|---|---|
 | `API_TOKEN`, `A2A_TOKEN`, `MCP_TOKEN` | `.env` por máquina (gitignored) | Auth entre servicios | Borrar `.env` → `scripts/generar_env.py` |
+| Dominios corporativos | `~/.ia-local/dominios-corporativos` (o `IA_DOMINIOS_CORPORATIVOS`) | Escáner de secretos: bloquear correos del empleador | Editar el archivo |
 | Clave HMAC | `~/.ia-local/hitl.key` | Sellar checkpoints del lab 11 | Borrarla invalida checkpoints pendientes |
-| Cuenta GitHub dueña del repo | keyring de `gh` | Clonar/push del repo privado | `gh auth login` / `gh auth logout` |
+| Cuenta GitHub dueña del repo | keyring de `gh` | Push al repo (clonar no requiere cuenta) | `gh auth login` / `gh auth logout` |
 
 Nunca en el repo: `.env`, claves, tokens de cuentas, el estado de ejecución (`data/hitl/`, logs,
 correcciones). El CI bloquea tokens con patrones conocidos (`scripts/escanear_secretos.py`).

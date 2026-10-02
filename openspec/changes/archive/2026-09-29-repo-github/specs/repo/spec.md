@@ -4,7 +4,7 @@
 `buscar_secretos(texto)` SHALL devolver las categorías encontradas entre: `github_token`
 (`ghp_`, `gho_`, `ghs_`, `ghu_`, `github_pat_` seguidos de 20+ caracteres), `openai_key` (`sk-` + 20+),
 `aws_key` (`AKIA` + 16 mayúsculas/dígitos), `slack_token` (`xox[baprs]-`), `clave_privada`
-(`-----BEGIN ... PRIVATE KEY-----`) y `correo_corporativo` (dominio `acity.com.pe` precedido de arroba;
+(`-----BEGIN ... PRIVATE KEY-----`) y `correo_corporativo` (dominio del empleador, hoy en configuración local `~/.ia-local/dominios-corporativos`, precedido de arroba;
 el patrón se arma por concatenación para que ni el escáner ni esta spec lo contengan). `escanear_secretos.py`
 SHALL recorrer los archivos que git publicaría y salir con código 1 si hay hallazgos.
 

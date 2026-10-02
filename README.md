@@ -12,11 +12,10 @@ vLLM on-prem o Azure/OpenAI con solo cambiar variables de entorno.
 
 ```bash
 # 1. Herramientas (instaladores oficiales; en Apple Silicon Ollama usa la GPU vía Metal: mucho más rápido que CPU)
-brew install uv gh            # o: https://docs.astral.sh/uv/  ·  https://cli.github.com/
+brew install uv              # o: https://docs.astral.sh/uv/
 brew install --cask ollama    # o la app oficial de https://ollama.com/download
-# 2. Repo privado (autenticado con la cuenta dueña del repo)
-gh auth login
-gh repo clone jackthony/IA-local && cd IA-local
+# 2. Repo (público)
+git clone https://github.com/jackthony/IA-local.git && cd IA-local
 # 3. Dependencias EXACTAS del lock (hashes verificados) y modelos
 uv sync --locked
 ollama pull qwen3:4b-instruct
@@ -162,7 +161,8 @@ Datos de negocio: fuente única en `labs/empresa.py` (la usan el servidor MCP y 
 3. ~~MCP server como tool compartido entre agentes~~ ✅
 3b. ~~Proyecto "Jev local": decisiones tipadas con probabilidad calibrada~~ ✅ (ver `jev/README.md`)
 4. ~~Human-in-the-loop (aprobación de tools) + checkpointing~~ ✅ (lab 11)
-5. Producción: Docker Compose (un contenedor por agente A2A), auth en A2A, OpenTelemetry → Aspire/Jaeger, evals
+5. ~~Producción: Docker Compose, auth entre servicios, OpenTelemetry → Jaeger~~ ✅ (`servicios/`, validado en la MacBook)
+6. CI/CD para trunk-based development (gate único local = CI, stack en CI, despliegue local) y evals con umbrales
 
 ## Auditoría zero trust de alternativas open source a Jev (2026-09-28, solo remota)
 
@@ -179,3 +179,8 @@ Ningún código de terceros se ejecutó ni quedó en disco.
 
 Veredicto: ninguno listo para la empresa hoy (repos de <2 semanas, sin OpenSSF Scorecard). Siguiente paso
 si se quiere adoptar uno: prueba en sandbox desechable sin red (nivel 2), nunca en equipos de trabajo.
+
+## Licencia
+
+Código bajo [MIT](LICENSE). Los datasets de `data/` mantienen sus propias licencias (CDLA-Sharing-1.0 y
+CC BY-NC 4.0, solo uso no comercial): ver [data/LICENCIAS.md](data/LICENCIAS.md).
