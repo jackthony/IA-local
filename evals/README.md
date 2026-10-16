@@ -50,6 +50,8 @@ Se usan sus `probabilities`, no su `confidence`: esa es `(p_max - 1/n)/(1 - 1/n)
 probabilidad de acierto. El umbral de ruteo de la calibración local (0.7033) se aplica **sin recalibrar**, así que ECE y
 % automatizado de este perfil son indicativos; recalibra con datos propios antes de decidir con ellos.
 
+**Con tickets reales**: [ETIQUETAR.md](ETIQUETAR.md) explica cómo reunirlos y etiquetarlos, con la plantilla `plantilla-tickets.csv`.
+
 **Con tickets reales** (`csv_a_golden.py`): convierte un CSV de tickets en un golden privado (`evals/golden/privado/`, ignorado por
 git), anonimizando la PII antes de escribir nada, sin adivinar áreas (toda área debe estar en el catálogo o en `--mapa`), con
 los mensajes de prompt injection como casos críticos a humano y mínimo 50 casos únicos. Luego se mide igual que el resto:
