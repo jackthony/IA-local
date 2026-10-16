@@ -1,0 +1,47 @@
+{
+  "modelo": "qwen3:4b-instruct",
+  "T": 6.0,
+  "umbrales": {
+    "0.05": 0.8287829985845337,
+    "0.10": 0.5350413959063202
+  },
+  "opciones": [
+    "ACCOUNT",
+    "ORDER",
+    "REFUND",
+    "INVOICE",
+    "CONTACT",
+    "PAYMENT",
+    "FEEDBACK",
+    "DELIVERY",
+    "SHIPPING",
+    "SUBSCRIPTION",
+    "CANCEL",
+    "OTRO"
+  ],
+  "descripciones": [
+    "incluye: create account, delete account, edit account, recover password, registration problems, switch account",
+    "incluye: cancel order, change order, place order, track order",
+    "incluye: check refund policy, get refund, track refund",
+    "incluye: check invoice, get invoice",
+    "incluye: contact customer service, contact human agent",
+    "incluye: check payment methods, payment issue",
+    "incluye: complaint, review",
+    "incluye: delivery options, delivery period",
+    "incluye: change shipping address, set up shipping address",
+    "incluye: newsletter subscription",
+    "incluye: check cancellation fee",
+    "incluye: charla, consulta vaga, fuera de tema, ininteligible, saludo, solicitud ajena"
+  ],
+  "pregunta": "Classify the customer message into one of these categories",
+  "rotulo": "Message",
+  "n_cal": 480,
+  "n_ev": 480,
+  "exactitud_ev": 0.8958333333333334,
+  "ece_ev": 0.03657479743627096,
+  "fecha": "2026-10-16",
+  "origen": "Bitext_Sample_Customer_Support_Training_Dataset_27K_responses-v11.csv",
+  "sha256_origen": "6f81102b0100b97b8468eb04368033a23206bf1fde9d53500d5806ec1001a434",
+  "extra": "ood-otro-v1.csv",
+  "sha256_extra": "6e5a86d65cd9bf7f04f17c030ecb53e8630ceb18acac7241def30d1afb083a9a"
+}

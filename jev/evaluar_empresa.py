@@ -104,6 +104,7 @@ async def main() -> None:
     ap.add_argument("--modelo", default="qwen3:4b-instruct")
     ap.add_argument("--n-cal", type=int, default=15, help="por área")
     ap.add_argument("--n-ev", type=int, default=20, help="por área")
+    ap.add_argument("--extra", type=Path, help="CSV adicional con las mismas columnas (p. ej. mensajes fuera de dominio de una clase OTRO)")
     ap.add_argument("--permitir-remoto", action="store_true", help="permite un LLM no local (los datos salen)")
     a = ap.parse_args()
 
@@ -115,6 +116,11 @@ async def main() -> None:
     sha = hashlib.sha256(crudo).hexdigest()
     requeridas = {a.texto, a.area} | ({a.desc_columna} if a.desc_columna else set())
     fs = [f for f in filas(crudo.decode("utf-8-sig"), requeridas) if f[a.area].strip() and f[a.texto].strip()]
+    sha_extra = None
+    if a.extra:
+        extra = a.extra.read_bytes()
+        sha_extra = hashlib.sha256(extra).hexdigest()
+        fs += [f for f in filas(extra.decode("utf-8-sig"), requeridas) if f[a.area].strip() and f[a.texto].strip()]
     redacciones, inyecciones = collections.Counter(), 0
     for f in fs:
         f["_t"] = anonimizar(f[a.texto])
@@ -176,6 +182,7 @@ async def main() -> None:
         "descripciones": list(desc) if desc else None, "pregunta": a.pregunta, "rotulo": a.rotulo,
         "n_cal": len(cal), "n_ev": len(ev), "exactitud_ev": sum(ok) / len(ok), "ece_ev": ece(conf, ok),
         "fecha": datetime.date.today().isoformat(), "origen": a.csv.name, "sha256_origen": sha,
+        **({"extra": a.extra.name, "sha256_extra": sha_extra} if a.extra else {}),
     }, indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"artefacto: {salida}")
 

@@ -32,7 +32,7 @@ from typesafe import TypeSafeJev, solicitud  # noqa: E402
 r10 = importlib.import_module("10_router_jev")
 h11 = importlib.import_module("11_hitl_router")
 
-GOLDEN = RAIZ / "evals" / "golden" / "golden-v2.jsonl"
+GOLDEN = RAIZ / "evals" / "golden" / "golden-v3.jsonl"
 UMBRALES = RAIZ / "evals" / "umbrales.json"
 REPORTES = RAIZ / "evals" / "reportes"
 PERFILES = ("ollama", "deepseek", "typesafe")

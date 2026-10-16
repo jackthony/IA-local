@@ -12,7 +12,7 @@ RUN uv sync --locked --no-dev --extra prod --no-install-project
 COPY labs/ labs/
 COPY jev/ jev/
 COPY servicios/ servicios/
-COPY data/calibracion-bitext-demo.json data/
+COPY data/calibracion-bitext-otro.json data/
 RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin app
 USER 10001
 ENV PATH="/app/.venv/bin:$PATH"

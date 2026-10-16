@@ -13,7 +13,7 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-DEFECTO = [["REFUND", -0.01], ["PAYMENT", -4.6]]
+DEFECTO = [["REFUND", -0.0001], ["PAYMENT", -25.0]]  # confianza alta con cualquier T de calibración razonable
 MONTO = re.compile(r"(\d+(?:\.\d+)?)\s*soles", re.IGNORECASE)
 
 

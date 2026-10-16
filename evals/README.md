@@ -1,13 +1,14 @@
 # evals/ — golden set del router Jev y la política de reembolso (lab 11)
 
-- `golden/golden-v2.jsonl`: 77 casos versionados (cada versión es inmutable: para cambiar casos, crear `golden-v3.jsonl`).
-  69 de ruteo (56 claros, 5 ambiguos/fuera de dominio, 8 prompt injection) y 8 de política de reembolso.
+- `golden/golden-v3.jsonl`: 85 casos versionados (cada versión es inmutable: para cambiar casos, crear `golden-v3.jsonl`).
+  77 de ruteo (56 claros, 13 fuera de dominio/ambiguos con esperado `OTRO`, 8 prompt injection) y 8 de política de reembolso.
+  v3 sobre v2: clase `OTRO` (fuera de dominio) y 8 casos nuevos; calibración `calibracion-bitext-otro.json` (DECISIONES §8).
   v2 sobre v1: `ambiguo-03` ("devuélvanme el dinero o reemplácenlo") pasa a `reembolso-mixto-01`, REFUND a especialista:
   es una solicitud de reembolso con alternativa, no una ambigüedad; v1 la esperaba en humano por una etiqueta discutible.
   `critico: true` = un error mueve dinero o acceso sin revisión humana.
-- `golden/predicciones-v2-<perfil>.jsonl`: logprobs crudos de Jev, latencia y tokens, grabados con `--grabar`.
+- `golden/predicciones-v3-<perfil>.jsonl`: logprobs crudos de Jev, latencia y tokens, grabados con `--grabar`.
   Llevan el SHA-256 del golden y del prompt: si cambian, la corrida falla pidiendo regrabar.
-- `golden/limitaciones-v2-ollama.json`: casos cuyo destino real difiere del esperado, con su impacto escrito. La puerta es un
+- `golden/limitaciones-v3-ollama.json`: casos cuyo destino real difiere del esperado, con su impacto escrito. La puerta es un
   trinquete: una divergencia nueva o cambiada falla, y una resuelta obliga a retirarla (ver `DECISIONES.md` §5).
 - `llm_falso.py`: servidor falso compatible con OpenAI que repite estos logprobs; lo usan los escenarios de producción
   (`servicios/test_escenarios.py`, `labs/test_escenarios_hitl.py`).
@@ -16,7 +17,7 @@
 Métricas: exactitud global y por clase (solo casos con categoría verdadera), ECE, % automatizado (sobre los 69
 de ruteo), críticos mal enviados a automático (crítico ruteado a un especialista cuando debía ir a humano, o al
 especialista equivocado) + reembolsos inválidos aceptados, y exactitud de destino (el destino real coincide con el
-esperado; hoy 92.8 %, las 5 divergencias están en `limitaciones-v2-ollama.json`).
+esperado; hoy 92.2 %, las 6 divergencias están en `limitaciones-v3-ollama.json`).
 
 ## Perfiles de modelo (solo variables de entorno)
 

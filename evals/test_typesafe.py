@@ -151,6 +151,7 @@ def test_grabar_y_evaluar_de_extremo_a_extremo() -> None:
         shutil.copy(ev.GOLDEN, golden)
         casos = ev.cargar_golden(golden, CAL["opciones"])
         try:
+            llamadas = sum(c["tipo"] == "ruteo" for c in casos) + 1  # casos de ruteo + calentamiento
             salida = asyncio.run(ev.grabar(casos, CAL, "typesafe", golden))
             meta, preds = ev.cargar_predicciones(salida)
             assert meta["backend"] == "typesafe" and meta["modelo"] == "jev-1.13.0" and not meta["local"]
@@ -159,10 +160,10 @@ def test_grabar_y_evaluar_de_extremo_a_extremo() -> None:
             m = ev.evaluar(casos, preds, CAL, meta, {"entrada_1m": 0.042, "salida_1m": 0.0})
             assert m["exactitud_global"] == 1.0 and m["logprobs_degenerados"] == 0
             assert m["tokens_por_decision"] == {"entrada": 400.0, "salida": 70.0} and m["costo_por_1000_usd"] == 0.0168
-            assert len(Servicio.recibidas) == 70  # 69 casos + calentamiento
+            assert len(Servicio.recibidas) == llamadas  # casos de ruteo + calentamiento
             assert all("@" not in c["state"] for c in Servicio.recibidas), "PII enviada al servicio"
             uso = (ev.REPORTES / "uso.jsonl").read_text(encoding="utf-8")
-            assert '"llamadas": 70' in uso and CLAVE not in uso
+            assert f'"llamadas": {llamadas}' in uso and CLAVE not in uso
         finally:
             ev.REPORTES = original
             for k in ("TYPESAFE_API_KEY", "TYPESAFE_URL"):

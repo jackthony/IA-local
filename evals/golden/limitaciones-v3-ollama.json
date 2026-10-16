@@ -1,0 +1,26 @@
+{
+  "account-01": {
+    "destino": "humano",
+    "impacto": "Conservador: caso crítico claro ('olvidé mi contraseña') con confianza bajo el umbral 0.83 va a una persona. Cuesta atención humana, no riesgo."
+  },
+  "order-04": {
+    "destino": "humano",
+    "impacto": "Conservador: pedido claro con confianza bajo el umbral. Cuesta atención humana, no riesgo."
+  },
+  "subscription-04": {
+    "destino": "humano",
+    "impacto": "Conservador: confianza bajo el umbral. Cuesta atención humana, no riesgo."
+  },
+  "cancel-01": {
+    "destino": "humano",
+    "impacto": "Conservador: confianza bajo el umbral 0.83. Cuesta atención humana, no riesgo."
+  },
+  "cancel-03": {
+    "destino": "humano",
+    "impacto": "Conservador: confianza bajo el umbral 0.83. Cuesta atención humana, no riesgo."
+  },
+  "otro-08": {
+    "destino": "atencion",
+    "impacto": "Opinión sobre fútbol sale a atención con confianza 0.97: el 4B lo toma por FEEDBACK ('opinas'). Inocuo, pero es la única fuga fuera de dominio que queda; OTRO acierta 9 de 12 y los otros 2 errores igual llegan a humano por confianza baja."
+  }
+}

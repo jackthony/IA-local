@@ -3,7 +3,7 @@
 Jev (1 token, confianza calibrada, ~1 s) decide la categoría; el CÓDIGO rutea: especialista si la
 confianza supera el umbral derivado del error objetivo, cola humana si duda o si el mensaje parece
 prompt injection. Cada decisión queda en data/router-log.jsonl anonimizada (observabilidad y
-recalibración). Calibración: data/calibracion-bitext-demo.json (jev/evaluar_empresa.py).
+recalibración). Calibración: data/calibracion-bitext-otro.json (jev/evaluar_empresa.py).
 """
 import asyncio
 import datetime
@@ -22,7 +22,7 @@ from jev import Choice, Jev  # noqa: E402
 
 from common import agent  # noqa: E402
 
-CALIBRACION = RAIZ / "data" / "calibracion-bitext-demo.json"
+CALIBRACION = RAIZ / "data" / "calibracion-bitext-otro.json"
 LOG = RAIZ / "data" / "router-log.jsonl"
 REQUERIDAS = ("modelo", "T", "umbrales", "opciones", "pregunta", "rotulo")
 ESPECIALISTAS = {"ORDER": "pedidos", "SHIPPING": "pedidos", "DELIVERY": "pedidos", "CANCEL": "pedidos",

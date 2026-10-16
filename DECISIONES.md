@@ -31,7 +31,8 @@ Formato: contexto → decisión → por qué → qué cuesta → cómo se verifi
   preguntas sin señal. Hablar en "error tolerado" convierte una decisión técnica en una de negocio, y hace que el
   sistema **se abstenga cuando no sabe**: con las etiquetas ruidosas de Kaggle automatiza ~0 % (todo a humano) en
   lugar de rutear mal en silencio como el LLM generativo (~73 % de fallo sin aviso). Con Bitext, el 4B con
-  descripciones automatiza el 89 % del tráfico con 1 % de error.
+  descripciones automatizó el 89 % del tráfico con 1 % de error **con 15 ejemplos de calibración por clase**; con 40 por
+  clase (§8) el umbral sube de 0.70 a 0.83 y la automatización sobre el golden baja a ~68 %: la cifra anterior era optimista.
 - **Cuesta.** Necesita datos etiquetados de calibración y recalibrar al cambiar de modelo, prompt o dominio.
   Es frágil con pocas muestras: el 8B "ganó" 100 % automático con 93 % de exactitud real (sobreajuste con 165
   ejemplos). Por eso se pide cientos de ejemplos y validación separada, y `evals/` replica la decisión con el
@@ -119,7 +120,23 @@ Formato: contexto → decisión → por qué → qué cuesta → cómo se verifi
   concluyente; no hay evidencia aquí de que el servicio supere al modelo local, solo de que lo iguala con más latencia.
 - **Verificación.** `evals/test_typesafe.py` contra un servicio falso, incluida la grabación completa.
 
-## 8. Decisiones menores relacionadas
+## 8. Clase explícita OTRO y calibración con más muestra
+
+- **Contexto.** Mensajes fuera de dominio ("hello", el clima) salían a un especialista con 0.97 de confianza en Ollama y en
+  TypeSafe: el catálogo de 11 clases obligaba a elegir una. La documentación de Choice recomienda una opción "other/none".
+- **Decisión.** Clase `OTRO` sin especialista: `decidir_ruta` ya manda lo que no tiene especialista a humano ("sin
+  especialista"). Se calibró con Bitext + 120 mensajes fuera de dominio propios (`data/ood-otro-v1.csv`, distintos del
+  golden para no filtrar datos de prueba) y golden-v3 con 12 casos `OTRO` (v2 queda inmutable).
+- **Resultado (Ollama).** "hello" y el clima ya van a humano; divergencias de destino 5 → 6 pero 5 son conservadoras
+  (humano por confianza baja) y solo `otro-08` (fútbol, 0.97) sigue saliendo a un especialista. OTRO acierta 9/12.
+- **Corrección importante.** Calibrar con 40 ejemplos por clase, con o sin OTRO, da umbral ~0.83-0.84: el 0.70 anterior
+  venía de 15 por clase y era optimista. Automatización sobre el golden: 82.6 % → 67.5 %. `umbrales.json` baja
+  `min_pct_automatizado` a 0.60 y `min_exactitud_clase` a 0.75 (por OTRO, 12 casos) con la razón escrita en `_nota`.
+- **Cuesta.** Más tráfico a humanos; la clase OTRO se calibró con ejemplos escritos por nosotros, no tráfico real.
+- **Pendiente.** Regrabar TypeSafe sobre golden-v3 (requiere la clave del usuario); DeepSeek no se repite.
+- **Verificación.** `evals/evaluar.py`, escenarios de producción y `evals/test_evals.py`.
+
+## 9. Decisiones menores relacionadas
 
 - **Reembolso: el LLM propone, el humano aprueba los argumentos exactos, el código ejecuta** (`proto_aprobacion.py`),
   con política de montos en código (`MAX_REEMBOLSO`) y operación idempotente. Aprobación humana no sustituye política.

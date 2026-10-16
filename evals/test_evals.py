@@ -54,8 +54,8 @@ def test_divergencia_nueva_falla() -> None:
 
 
 def test_limitacion_resuelta_obliga_a_retirarla() -> None:
-    v = ev.compuerta(medir(), U, {**CONOCIDAS, "account-01": {"destino": "humano", "impacto": "ya no aplica"}})
-    assert any("resuelta" in x and "account-01" in x for x in v)
+    v = ev.compuerta(medir(), U, {**CONOCIDAS, "refund-01": {"destino": "humano", "impacto": "ya no aplica"}})
+    assert any("resuelta" in x and "refund-01" in x for x in v)
 
 
 def test_limitacion_que_cambia_de_destino_falla() -> None:
@@ -83,7 +83,7 @@ def test_logprobs_degenerados_se_detectan() -> None:
 
 
 def test_limitaciones_son_por_perfil() -> None:
-    assert ev.ruta_limitaciones(perfil="ollama").name == "limitaciones-v2-ollama.json"
+    assert ev.ruta_limitaciones(perfil="ollama").name == "limitaciones-v3-ollama.json"
     assert ev.ruta_limitaciones(perfil="deepseek") != ev.ruta_limitaciones(perfil="ollama")
 
 
