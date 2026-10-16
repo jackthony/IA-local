@@ -133,7 +133,11 @@ Formato: contexto → decisión → por qué → qué cuesta → cómo se verifi
   venía de 15 por clase y era optimista. Automatización sobre el golden: 82.6 % → 67.5 %. `umbrales.json` baja
   `min_pct_automatizado` a 0.60 y `min_exactitud_clase` a 0.75 (por OTRO, 12 casos) con la razón escrita en `_nota`.
 - **Cuesta.** Más tráfico a humanos; la clase OTRO se calibró con ejemplos escritos por nosotros, no tráfico real.
-- **Pendiente.** Regrabar TypeSafe sobre golden-v3 (requiere la clave del usuario); DeepSeek no se repite.
+- **TypeSafe sobre golden-v3 (2026-10-16).** Exactitud 100 % (incluida OTRO), ECE 0.004, 72.7 % automatizado con el mismo
+  umbral 0.83 sin recalibrar, **0 divergencias de destino** (resuelve `otro-08`, que Ollama no), 342 ms de mediana,
+  579 tokens de entrada y 119 de salida por decisión (~USD 0.024 por 1,000 con el precio de lista de entrada USD 0.042/M).
+  Frente a Ollama (95.7 %, 67.5 %, 70 ms, costo 0): más exacto y con más automatización, 5× más lento y con costo y envío
+  de datos a un tercero. Sigue siendo una muestra de 85 casos escritos por nosotros; DeepSeek no se repite.
 - **Verificación.** `evals/evaluar.py`, escenarios de producción y `evals/test_evals.py`.
 
 ## 9. Decisiones menores relacionadas
