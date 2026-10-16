@@ -1,7 +1,7 @@
 """Cliente LLM compartido. Cambia de modelo/servidor por env, no por código.
 
 Usa la API OpenAI-compatible: el mismo código apunta a Ollama (local), vLLM (GPU on-prem)
-o Azure/OpenAI (cloud) cambiando LLM_BASE_URL / LLM_API_KEY / LLM_MODEL.
+o DeepSeek/OpenAI (cloud) cambiando LLM_BASE_URL / LLM_API_KEY / LLM_MODEL.
 """
 import os
 
@@ -32,7 +32,7 @@ def client(model: str | None = None, nombre: str | None = None) -> OpenAIChatCom
     return OpenAIChatCompletionClient(
         model=model or os.getenv("LLM_MODEL", "qwen3:4b-instruct"),
         base_url=os.getenv("LLM_BASE_URL", "http://localhost:11434/v1"),
-        api_key=os.getenv("LLM_API_KEY", "ollama"),  # Ollama ignora la key; vLLM/Azure no.
+        api_key=os.getenv("LLM_API_KEY", "ollama"),  # Ollama ignora la key; vLLM/DeepSeek no.
         message_preparer=otros_como_user(nombre) if nombre else None,
     )
 

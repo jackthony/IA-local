@@ -2,7 +2,7 @@
 
 Golden `golden-v2.jsonl` sha256 `b48b2bfae01a`, 77 casos.
 
-| Métrica | ollama | azure |
+| Métrica | ollama | deepseek |
 |---|---|---|
 | Modelo | qwen3:4b-instruct | no ejecutado |
 | Exactitud global | 100.0% | no ejecutado |
@@ -13,4 +13,4 @@ Golden `golden-v2.jsonl` sha256 `b48b2bfae01a`, 77 casos.
 | Tokens por decisión (ent/sal) | 210 / 1 | no ejecutado |
 | Costo USD por 1,000 decisiones | 0 (local, sin contar energía) | no ejecutado |
 
-`no ejecutado`: sin predicciones grabadas para azure. Carga el perfil (perfiles/*.env.example) y corre `evals/evaluar.py --perfil <perfil> --grabar`.
+`no ejecutado`: sin predicciones grabadas para deepseek. Carga el perfil (perfiles/*.env.example) y corre `evals/evaluar.py --perfil <perfil> --grabar`.

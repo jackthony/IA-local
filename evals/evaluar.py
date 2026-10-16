@@ -2,7 +2,7 @@
 
   uv run python evals/evaluar.py                      # repite predicciones grabadas (sin LLM) -> puerta de CI
   uv run python evals/evaluar.py --grabar             # llama a Jev en vivo con LLM_BASE_URL/LLM_MODEL/LLM_API_KEY
-  uv run python evals/evaluar.py --comparar           # tabla Ollama vs Azure desde las predicciones grabadas
+  uv run python evals/evaluar.py --comparar           # tabla Ollama vs DeepSeek desde las predicciones grabadas
 
 Las predicciones guardan los logprobs crudos de Jev: la repetición recalcula confianza, ruteo y detector con el
 código y la calibración ACTUALES, así que un cambio en umbral, T, detector o política rompe la puerta sin LLM.
@@ -34,7 +34,7 @@ h11 = importlib.import_module("11_hitl_router")
 GOLDEN = RAIZ / "evals" / "golden" / "golden-v2.jsonl"
 UMBRALES = RAIZ / "evals" / "umbrales.json"
 REPORTES = RAIZ / "evals" / "reportes"
-PERFILES = ("ollama", "azure")
+PERFILES = ("ollama", "deepseek")
 CLAVES_UMBRAL = ("min_exactitud_global", "min_exactitud_clase", "max_ece", "min_pct_automatizado",
                  "max_criticos_automaticos", "min_exactitud_reembolso")
 

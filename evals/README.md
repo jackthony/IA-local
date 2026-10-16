@@ -20,15 +20,15 @@ esperado; hoy 92.8 %, las 5 divergencias están en `limitaciones-v2.json`).
 
 ## Perfiles de modelo (solo variables de entorno)
 
-El cliente es OpenAI-compatible, así que cambiar de Ollama a Azure OpenAI no toca código:
+El cliente es OpenAI-compatible, así que cambiar de Ollama a DeepSeek no toca código:
 
 ```bash
 set -a; source perfiles/ollama.env.example; set +a
 uv run python evals/evaluar.py --perfil ollama --grabar
 
-cp perfiles/azure.env.example ~/mi-azure.env   # fuera del repo; rellena endpoint, despliegue, clave y precios
-set -a; source ~/mi-azure.env; set +a
-uv run python evals/evaluar.py --perfil azure --grabar
+cp perfiles/deepseek.env.example ~/mi-deepseek.env   # fuera del repo; rellena clave y precios
+set -a; source ~/mi-deepseek.env; set +a
+uv run python evals/evaluar.py --perfil deepseek --grabar
 uv run python evals/evaluar.py --comparar        # escribe evals/COMPARACION.md
 ```
 
@@ -37,5 +37,5 @@ El costo por 1,000 decisiones usa los tokens medidos y los precios de TU contrat
 Local = 0 sin contar hardware ni energía.
 
 **Calibración:** `T` y el umbral están calibrados para `qwen3:4b-instruct`. Con otro modelo la confianza no se
-transfiere (ECE y % automatizado de Azure salen con la calibración de Ollama). Para una comparación justa de
+transfiere (ECE y % automatizado de DeepSeek salen con la calibración de Ollama). Para una comparación justa de
 ECE/automatización, recalibra con `jev/evaluar_empresa.py` y usa un `data/calibracion-*.json` propio.

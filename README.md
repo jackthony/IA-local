@@ -6,7 +6,7 @@ nivel en Mac) · 📋 [INVENTARIO.md](INVENTARIO.md) (se regenera por máquina) 
 
 Stack: **Ollama** (CPU) + **Microsoft Agent Framework** (Python) + **A2A SDK**.
 El cliente es OpenAI-compatible (`labs/common.py`): el mismo código corre contra Ollama local,
-vLLM on-prem o Azure/OpenAI con solo cambiar variables de entorno.
+vLLM on-prem o DeepSeek/OpenAI con solo cambiar variables de entorno.
 
 ## Setup en macOS (MacBook)
 
@@ -39,7 +39,7 @@ auditarlos, no es un paso obligatorio. El dataset de tickets es CC BY-NC 4.0 (so
 `evals/` mide el router Jev (lab 10) y la política de reembolso (lab 11) contra 77 casos versionados
 (`evals/golden/golden-v2.jsonl`): exactitud por clase, ECE, % automatizado y casos críticos mal enviados a
 automático. `evals/umbrales.json` fija los límites; CI falla si se pasa alguno y deja un reporte JSON por corrida
-en `evals/reportes/`. Perfiles de modelo (Ollama / Azure OpenAI) y comparación: [evals/README.md](evals/README.md).
+en `evals/reportes/`. Perfiles de modelo (Ollama / DeepSeek) y comparación: [evals/README.md](evals/README.md).
 
 ```bash
 uv run python evals/evaluar.py             # repite predicciones grabadas, sin LLM (lo que corre CI)
