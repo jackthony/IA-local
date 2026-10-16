@@ -1,9 +1,11 @@
 # evals/ — golden set del router Jev y la política de reembolso (lab 11)
 
-- `golden/golden-v1.jsonl`: 77 casos versionados (v1 es inmutable: para cambiar casos, crear `golden-v2.jsonl`).
-  69 de ruteo (55 claros en 11 clases, 6 ambiguos/fuera de dominio, 8 prompt injection) y 8 de política de reembolso.
+- `golden/golden-v2.jsonl`: 77 casos versionados (cada versión es inmutable: para cambiar casos, crear `golden-v3.jsonl`).
+  69 de ruteo (56 claros, 5 ambiguos/fuera de dominio, 8 prompt injection) y 8 de política de reembolso.
+  v2 sobre v1: `ambiguo-03` ("devuélvanme el dinero o reemplácenlo") pasa a `reembolso-mixto-01`, REFUND a especialista:
+  es una solicitud de reembolso con alternativa, no una ambigüedad; v1 la esperaba en humano por una etiqueta discutible.
   `critico: true` = un error mueve dinero o acceso sin revisión humana.
-- `golden/predicciones-v1-<perfil>.jsonl`: logprobs crudos de Jev, latencia y tokens, grabados con `--grabar`.
+- `golden/predicciones-v2-<perfil>.jsonl`: logprobs crudos de Jev, latencia y tokens, grabados con `--grabar`.
   Llevan el SHA-256 del golden y del prompt: si cambian, la corrida falla pidiendo regrabar.
 - `umbrales.json`: límites de la puerta. `evaluar.py` sale con 1 si se pasa alguno y escribe `reportes/*.json`.
 

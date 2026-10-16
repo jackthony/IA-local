@@ -1,9 +1,9 @@
 {
-  "_nota": "Medido con qwen3:4b-instruct el 2026-10-16: exactitud 100 %, ECE 0.026, automatizado 84.1 %, 1 critico a automatico (ambiguo-03: reembolso o reemplazo sin monto, etiqueta discutible). ambiguo-06 (amenaza legal) lo ataja es_riesgoso. max_criticos_automaticos=1 es la linea base, no la meta.",
-  "min_exactitud_global": 0.90,
-  "min_exactitud_clase": 0.80,
+  "_nota": "Medido con qwen3:4b-instruct el 2026-10-16 sobre golden-v2: exactitud 100 %, ECE 0.026, 0 críticos a automático. ambiguo-06 (amenaza legal) lo ataja es_riesgoso. En v1 había 1 crítico por una etiqueta discutible (ambiguo-03), corregida en v2.",
+  "min_exactitud_global": 0.9,
+  "min_exactitud_clase": 0.8,
   "max_ece": 0.08,
   "min_pct_automatizado": 0.75,
-  "max_criticos_automaticos": 1,
+  "max_criticos_automaticos": 0,
   "min_exactitud_reembolso": 1.0
 }

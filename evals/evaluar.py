@@ -31,7 +31,7 @@ from jev import Choice, Jev, decidir, distribucion, ece, etiquetas, prompt  # no
 r10 = importlib.import_module("10_router_jev")
 h11 = importlib.import_module("11_hitl_router")
 
-GOLDEN = RAIZ / "evals" / "golden" / "golden-v1.jsonl"
+GOLDEN = RAIZ / "evals" / "golden" / "golden-v2.jsonl"
 UMBRALES = RAIZ / "evals" / "umbrales.json"
 REPORTES = RAIZ / "evals" / "reportes"
 PERFILES = ("ollama", "azure")

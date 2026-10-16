@@ -37,7 +37,7 @@ auditarlos, no es un paso obligatorio. El dataset de tickets es CC BY-NC 4.0 (so
 ## Evaluación continua (golden set)
 
 `evals/` mide el router Jev (lab 10) y la política de reembolso (lab 11) contra 77 casos versionados
-(`evals/golden/golden-v1.jsonl`): exactitud por clase, ECE, % automatizado y casos críticos mal enviados a
+(`evals/golden/golden-v2.jsonl`): exactitud por clase, ECE, % automatizado y casos críticos mal enviados a
 automático. `evals/umbrales.json` fija los límites; CI falla si se pasa alguno y deja un reporte JSON por corrida
 en `evals/reportes/`. Perfiles de modelo (Ollama / Azure OpenAI) y comparación: [evals/README.md](evals/README.md).
 
