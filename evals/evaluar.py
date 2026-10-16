@@ -486,7 +486,8 @@ def main() -> int:
     salida.write_text(json.dumps(informe, indent=1, ensure_ascii=False), encoding="utf-8")
     print(f"exactitud {m['exactitud_global']:.1%} | ECE {m['ece']:.3f} | automatizado {m['pct_automatizado']:.1%} | "
           f"críticos a automático {len(m['criticos']['mal_a_automatico']) + len(m['criticos']['reembolsos_invalidos_aceptados'])} | "
-          f"destino {m['exactitud_destino']:.1%} | reembolso {m['exactitud_reembolso']:.0%} | reporte: {salida.relative_to(RAIZ)}")
+          f"destino {m['exactitud_destino']:.1%} | reembolso "
+          f"{'n/a' if m['exactitud_reembolso'] is None else format(m['exactitud_reembolso'], '.0%')} | reporte: {salida.relative_to(RAIZ)}")
     for x in m["errores"]:
         print(f"  ✗ {x['id']}: esperado {x['esperado']}, Jev {x['pred']} ({x['conf']}) -> {x['destino']} [{x['motivo']}]")
     for x in violaciones:

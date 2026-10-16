@@ -8,6 +8,9 @@
   `critico: true` = un error mueve dinero o acceso sin revisión humana.
 - `golden/predicciones-v3-<perfil>.jsonl`: logprobs crudos de Jev, latencia y tokens, grabados con `--grabar`.
   Llevan el SHA-256 del golden y del prompt: si cambian, la corrida falla pidiendo regrabar.
+- `golden/golden-holdout-bitext-v1.jsonl`: 240 casos independientes (Bitext + fuera de dominio que la calibración no usó),
+  generados con `generar_holdout.py`. Se miden con `--golden evals/golden/golden-holdout-bitext-v1.jsonl` (informativo: sin
+  limitaciones registradas no hay contraste, y los umbrales de CI son los de golden-v3). Ver DECISIONES §10.
 - `golden/limitaciones-v3-ollama.json`: casos cuyo destino real difiere del esperado, con su impacto escrito. La puerta es un
   trinquete: una divergencia nueva o cambiada falla, y una resuelta obliga a retirarla (ver `DECISIONES.md` §5).
 - `llm_falso.py`: servidor falso compatible con OpenAI que repite estos logprobs; lo usan los escenarios de producción

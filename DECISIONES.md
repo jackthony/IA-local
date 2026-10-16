@@ -157,7 +157,21 @@ Formato: contexto → decisión → por qué → qué cuesta → cómo se verifi
 - **Verificación.** `servicios/test_escenarios.py` (solo cuando duda, nunca inyección/legal/PII, cupo, juez caído) con dos
   mutaciones comprobadas.
 
-## 10. Decisiones menores relacionadas
+## 10. Hold-out independiente: el golden propio era optimista
+
+- **Contexto.** golden-v3 lo escribimos nosotros; no prueba que lo calibrado generalice.
+- **Decisión.** `evals/generar_holdout.py` saca 240 casos (20 por clase, 12 clases) de Bitext y `data/ood-otro-v1.csv` que la
+  calibración NO usó (se excluye por texto, porque Bitext repite textos en filas distintas), reproducible por semilla.
+  Se mide con `evaluar.py --golden evals/golden/golden-holdout-bitext-v1.jsonl`.
+- **Resultado (Ollama).** Exactitud 90.8 % (vs 95.7 % en golden-v3), ECE 0.025, 80.8 % automatizado **con 95.9 % de exactitud
+  dentro de lo automatizado**: la meta del 5 % de error tolerado se cumple fuera de la muestra de calibración. De las 33
+  divergencias de destino, 29 son casos claros enviados a humano por confianza baja (costo, no riesgo), 3 son `OTRO`
+  que sale a atención (`OTRO→CONTACT`: "necesito ayuda"-tipo) y 1 especialista equivocado. OTRO acierta 14/20.
+- **Lectura.** El umbral derivado del error tolerado generaliza; la exactitud bruta cae unos 5 puntos fuera del golden propio.
+  Las etiquetas de Bitext son sintéticas (no tráfico real), así que sigue sin sustituir a tickets reales anonimizados.
+- **Pendiente.** Medir TypeSafe y la cascada sobre este hold-out (la corrida con clave la hace el usuario; ~250 llamadas).
+
+## 11. Decisiones menores relacionadas
 
 - **Reembolso: el LLM propone, el humano aprueba los argumentos exactos, el código ejecuta** (`proto_aprobacion.py`),
   con política de montos en código (`MAX_REEMBOLSO`) y operación idempotente. Aprobación humana no sustituye política.
