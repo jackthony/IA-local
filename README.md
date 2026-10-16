@@ -46,6 +46,12 @@ uv run python evals/evaluar.py             # repite predicciones grabadas, sin L
 uv run python evals/evaluar.py --grabar    # mide en vivo con el modelo de LLM_BASE_URL / LLM_MODEL
 ```
 
+**Escenarios de producción.** Los mismos casos recorren el servicio real, de extremo a extremo, contra un servidor falso
+compatible con OpenAI (sin LLM, corre en CI): `servicios/test_escenarios.py` (HTTP, auth, PII, modelo caído o lento,
+telemetría sin contenido) y `labs/test_escenarios_hitl.py` (reembolsos, checkpoints, cola y ledger del lab 11).
+`servicios/test_escenarios.py --vivo` repite los escenarios del router contra el modelo real para detectar deriva.
+Las divergencias de destino que se aceptan están listadas con su impacto en `evals/golden/limitaciones-v2.json`.
+
 ## Producción local con Docker (MacBook)
 
 Tres servicios endurecidos + Jaeger, con Ollama nativo en el host (GPU Metal):
@@ -108,7 +114,8 @@ Evita `qwen3:4b` (variante *thinking-only*: razona siempre, ~5x más lento en CP
 Agent Card: http://localhost:5001/.well-known/agent-card.json
 
 Tests deterministas (sin LLM): `uv run python labs/test_divisas.py` · `uv run python labs/test_orquestacion.py` ·
-`uv run python labs/test_mcp.py` (protocolo MCP real) · `uv run python labs/test_router.py` · `uv run python labs/test_hitl.py`
+`uv run python labs/test_mcp.py` (protocolo MCP real) · `uv run python labs/test_router.py` · `uv run python labs/test_hitl.py` ·
+`uv run python labs/test_escenarios_hitl.py` · `uv run python servicios/test_escenarios.py`
 
 Datos de negocio: fuente única en `labs/empresa.py` (la usan el servidor MCP y los labs 04/07).
 

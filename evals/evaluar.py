@@ -47,6 +47,19 @@ def ruta_predicciones(perfil: str, golden: Path = GOLDEN) -> Path:
     return golden.with_name(f"predicciones-{golden.stem.removeprefix('golden-')}-{perfil}.jsonl")
 
 
+def ruta_limitaciones(golden: Path = GOLDEN) -> Path:
+    return golden.with_name(f"limitaciones-{golden.stem.removeprefix('golden-')}.json")
+
+
+def cargar_limitaciones(ruta: Path) -> dict[str, dict]:
+    """Casos cuyo destino real difiere del esperado y que se aceptan con motivo escrito: {id: {destino, impacto}}."""
+    lim = json.loads(Path(ruta).read_text(encoding="utf-8"))
+    for caso, x in lim.items():
+        if not isinstance(x.get("destino"), str) or not str(x.get("impacto", "")).strip():
+            raise ValueError(f"{caso}: una limitación conocida exige 'destino' observado e 'impacto' escrito")
+    return lim
+
+
 # ---------- carga y validación ----------
 def cargar_golden(ruta: Path, opciones: list[str]) -> list[dict]:
     casos, vistos = [], set()
@@ -115,6 +128,10 @@ def pct(valores: list[float], q: float) -> float:
     return s[min(len(s) - 1, math.ceil(q * len(s)) - 1)]
 
 
+def destino_esperado(caso: dict) -> str:
+    return r10.ESPECIALISTAS[caso["esperado"]] if caso["destino_esperado"] == "auto" else "humano"
+
+
 def evaluar(casos: list[dict], preds: dict[str, dict], cal: dict, meta: dict, precios: dict | None = None) -> dict:
     tipo = Choice(tuple(cal["opciones"]), tuple(cal["descripciones"]) if cal.get("descripciones") else None)
     umbral = cal["umbrales"]["0.05"]
@@ -126,6 +143,9 @@ def evaluar(casos: list[dict], preds: dict[str, dict], cal: dict, meta: dict, pr
         destino, motivo = r10.decidir_ruta(d.valor, d.confianza, umbral, r10.ESPECIALISTAS, r10.es_sospechoso(c["mensaje"]),
                                          r10.es_riesgoso(c["mensaje"]))
         filas.append({"caso": c, "pred": d.valor, "conf": d.confianza, "destino": destino, "motivo": motivo, "ms": p["ms"]})
+    divergencias = [{"id": f["caso"]["id"], "esperado": destino_esperado(f["caso"]), "destino": f["destino"],
+                     "motivo": f["motivo"], "critico": f["caso"]["critico"]}
+                    for f in filas if f["destino"] != destino_esperado(f["caso"])]
 
     con_verdad = [f for f in filas if f["caso"]["esperado"] is not None]
     aciertos = [f["pred"] == f["caso"]["esperado"] for f in con_verdad]
@@ -157,6 +177,8 @@ def evaluar(casos: list[dict], preds: dict[str, dict], cal: dict, meta: dict, pr
                                         max(1, sum(1 for f in auto if f["caso"]["esperado"])), 4),
         "criticos": {"n_ruteo": sum(f["caso"]["critico"] for f in filas), "n_reembolso": sum(c["critico"] for c in reembolsos),
                      "mal_a_automatico": criticos_mal, "reembolsos_invalidos_aceptados": aceptados},
+        "exactitud_destino": round(1 - len(divergencias) / len(filas), 4),
+        "divergencias_destino": divergencias,
         "exactitud_reembolso": round(sum(ok_reembolso) / len(ok_reembolso), 4) if ok_reembolso else None,
         "latencia_ms": {"mediana": round(statistics.median(ms)), "p95": round(pct(ms, 0.95))},
         "tokens_por_decision": {"entrada": round(t_in, 1), "salida": round(t_out, 1)},
@@ -184,9 +206,26 @@ def precios_env() -> dict:
     return {"entrada_1m": f("PRECIO_ENTRADA_USD_1M"), "salida_1m": f("PRECIO_SALIDA_USD_1M")}
 
 
-def compuerta(m: dict, u: dict) -> list[str]:
-    """Violaciones de umbral; lista vacía = aprueba."""
+def contrastar_limitaciones(divergencias: list[dict], conocidas: dict[str, dict]) -> list[str]:
+    """Trinquete: lo conocido no empeora ni se oculta. Una divergencia nueva o cambiada falla; una resuelta obliga a retirarla."""
     v = []
+    for x in divergencias:
+        previo = conocidas.get(x["id"])
+        if previo is None:
+            v.append(f"divergencia nueva {x['id']}: esperado {x['esperado']}, real {x['destino']} [{x['motivo']}]")
+        elif previo["destino"] != x["destino"]:
+            v.append(f"{x['id']} cambió de destino ({previo['destino']} -> {x['destino']}): revisa su limitación conocida")
+    resueltas = sorted(set(conocidas) - {x["id"] for x in divergencias})
+    if resueltas:
+        v.append(f"limitación(es) resuelta(s), retírala(s) del archivo de limitaciones: {resueltas}")
+    return v
+
+
+def compuerta(m: dict, u: dict, conocidas: dict[str, dict] | None = None) -> list[str]:
+    """Violaciones de umbral; lista vacía = aprueba. Con `conocidas` también contrasta las divergencias de destino."""
+    v = []
+    if conocidas is not None:
+        v += contrastar_limitaciones(m["divergencias_destino"], conocidas)
     if m["exactitud_global"] < u["min_exactitud_global"]:
         v.append(f"exactitud global {m['exactitud_global']:.3f} < {u['min_exactitud_global']}")
     for clase, x in m["exactitud_por_clase"].items():
@@ -306,7 +345,7 @@ def main() -> int:
         print(f"sin predicciones para {a.perfil}: corre con --grabar", file=sys.stderr)
         return 2
     u = cargar_umbrales(a.umbrales)
-    violaciones = compuerta(m, u)
+    violaciones = compuerta(m, u, cargar_limitaciones(ruta_limitaciones(a.golden)))
     informe = {"fecha": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
                "perfil": a.perfil, "modo": "vivo" if a.grabar else "repeticion",
                "golden": {"archivo": a.golden.name, "sha256": golden_sha, "casos": len(casos)},
@@ -318,7 +357,7 @@ def main() -> int:
     salida.write_text(json.dumps(informe, indent=1, ensure_ascii=False), encoding="utf-8")
     print(f"exactitud {m['exactitud_global']:.1%} | ECE {m['ece']:.3f} | automatizado {m['pct_automatizado']:.1%} | "
           f"críticos a automático {len(m['criticos']['mal_a_automatico']) + len(m['criticos']['reembolsos_invalidos_aceptados'])} | "
-          f"reembolso {m['exactitud_reembolso']:.0%} | reporte: {salida.relative_to(RAIZ)}")
+          f"destino {m['exactitud_destino']:.1%} | reembolso {m['exactitud_reembolso']:.0%} | reporte: {salida.relative_to(RAIZ)}")
     for x in m["errores"]:
         print(f"  ✗ {x['id']}: esperado {x['esperado']}, Jev {x['pred']} ({x['conf']}) -> {x['destino']} [{x['motivo']}]")
     for x in violaciones:

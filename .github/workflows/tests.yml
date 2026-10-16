@@ -25,8 +25,8 @@ jobs:
       - name: Tests deterministas (sin LLM)
         run: |
           for t in scripts/test_escanear_secretos.py scripts/test_repo.py scripts/test_inventario.py labs/test_divisas.py labs/test_orquestacion.py \
-                   labs/test_mcp.py labs/test_router.py labs/test_hitl.py evals/test_evals.py \
-                   jev/test_jev.py jev/test_datos.py jev/test_empresa.py servicios/test_servicios.py; do
+                   labs/test_mcp.py labs/test_router.py labs/test_hitl.py labs/test_escenarios_hitl.py evals/test_evals.py \
+                   jev/test_jev.py jev/test_datos.py jev/test_empresa.py servicios/test_servicios.py servicios/test_escenarios.py; do
             echo "== $t"
             uv run python "$t"
           done

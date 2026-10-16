@@ -36,6 +36,45 @@ def test_linea_base_aprueba() -> None:
     ev.verificar_frescura(META, ev.sha256(ev.GOLDEN), CAL, CASOS, PREDS)
 
 
+CONOCIDAS = ev.cargar_limitaciones(ev.ruta_limitaciones())
+
+
+def test_limitaciones_conocidas_son_exactas() -> None:
+    m = medir()
+    assert ev.compuerta(m, U, CONOCIDAS) == []
+    assert {x["id"] for x in m["divergencias_destino"]} == set(CONOCIDAS)
+    assert m["exactitud_destino"] == round(1 - len(CONOCIDAS) / m["n"]["ruteo"], 4)
+
+
+def test_divergencia_nueva_falla() -> None:
+    cal = copy.deepcopy(CAL)
+    cal["umbrales"]["0.05"] = 0.99  # más caso a humano que lo esperado: divergencias que nadie aceptó
+    v = ev.compuerta(medir(cal), U, CONOCIDAS)
+    assert any("divergencia nueva" in x for x in v)
+
+
+def test_limitacion_resuelta_obliga_a_retirarla() -> None:
+    v = ev.compuerta(medir(), U, {**CONOCIDAS, "account-01": {"destino": "humano", "impacto": "ya no aplica"}})
+    assert any("resuelta" in x and "account-01" in x for x in v)
+
+
+def test_limitacion_que_cambia_de_destino_falla() -> None:
+    primera = next(iter(CONOCIDAS))
+    cambiada = {**CONOCIDAS, primera: {**CONOCIDAS[primera], "destino": "pagos"}}
+    assert any("cambió de destino" in x for x in ev.compuerta(medir(), U, cambiada))
+
+
+def test_limitacion_sin_impacto_es_invalida() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        p = Path(d) / "l.json"
+        p.write_text(json.dumps({"x": {"destino": "humano", "impacto": " "}}), encoding="utf-8")
+        try:
+            ev.cargar_limitaciones(p)
+            raise AssertionError("debió lanzar ValueError")
+        except ValueError as e:
+            assert "impacto" in str(e)
+
+
 def test_umbral_alto_manda_todo_a_humano() -> None:
     cal = copy.deepcopy(CAL)
     cal["umbrales"]["0.05"] = 1.01

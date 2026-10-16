@@ -159,13 +159,16 @@ def umbral_auto(confianzas: list[float], aciertos: list[bool], error_max: float 
 
 class Jev:
     def __init__(self, model: str | None = None, t: float = 1.0, base_url: str | None = None,
-                 extra: dict | None = None, rotulo: str = "Texto") -> None:
+                 extra: dict | None = None, rotulo: str = "Texto", timeout: float | None = None,
+                 reintentos: int | None = None) -> None:
         self.model = model or os.getenv("LLM_MODEL", "qwen3:4b-instruct")
         self.t = t
         self.extra = extra  # extra_body del servidor, p. ej. {"reasoning_effort": "none"} para qwen3:8b
         self.rotulo = rotulo  # cómo se presenta el estado: "Ticket", "Correo", "Factura"...
+        # timeout y reintentos solo si se piden: el cliente OpenAI espera 10 min y reintenta 2 veces por defecto
+        limites = {k: v for k, v in (("timeout", timeout), ("max_retries", reintentos)) if v is not None}
         self._c = AsyncOpenAI(base_url=base_url or os.getenv("LLM_BASE_URL", "http://localhost:11434/v1"),
-                              api_key=os.getenv("LLM_API_KEY", "ollama"))
+                              api_key=os.getenv("LLM_API_KEY", "ollama"), **limites)
 
     async def logprobs(self, estado: str, pregunta: str, tipo: Tipo) -> list[tuple[str, float]]:
         r = await self._c.chat.completions.create(

@@ -305,20 +305,25 @@ async def procesar(resultado, storage: AlmacenSellado, cola: dict) -> None:
     guardar_cola(cola)
 
 
+async def ingresar(msg: str, storage: AlmacenSellado, cola: dict) -> None:
+    """Un mensaje entrante: PII a la bóveda del caso, workflow hasta responder o pausar en la cola humana."""
+    caso = os.urandom(8).hex()
+    anon, mapa = anonimizar_con_mapa(msg)
+    if mapa:
+        (BOVEDA / f"{caso}.json").write_text(json.dumps(mapa), encoding="utf-8")
+    print(f"> {anon}")
+    r = await construir(storage).run({"caso": caso, "mensaje": anon, "sospechoso": r10.es_sospechoso(msg),
+                                      "riesgoso": r10.es_riesgoso(msg)})
+    await procesar(r, storage, cola)
+
+
 async def iniciar() -> None:
     shutil.rmtree(HITL, ignore_errors=True)
     for d in (CKPT, BOVEDA):
         d.mkdir(parents=True, exist_ok=True)
     storage, cola = AlmacenSellado(CKPT, clave()), {}
     for msg in MENSAJES:
-        caso = os.urandom(8).hex()
-        anon, mapa = anonimizar_con_mapa(msg)
-        if mapa:
-            (BOVEDA / f"{caso}.json").write_text(json.dumps(mapa), encoding="utf-8")
-        print(f"> {anon}")
-        r = await construir(storage).run({"caso": caso, "mensaje": anon, "sospechoso": r10.es_sospechoso(msg),
-                                               "riesgoso": r10.es_riesgoso(msg)})
-        await procesar(r, storage, cola)
+        await ingresar(msg, storage, cola)
 
 
 async def responder(request_id: str, respuesta: dict) -> None:
