@@ -258,3 +258,29 @@ Formato: contexto → decisión → por qué → qué cuesta → cómo se verifi
   quien tenga tráfico limpio puede apagarla.
 - **Límite.** Mediciones sobre datos sintéticos; la proporción real de ruido ajeno depende del canal. Con tickets reales
   (`evals/csv_a_golden.py`) se decide si compensa.
+
+## 14. Consultas de clientes con otra redacción: la meta del 5 % de error no se cumple
+
+- **Contexto.** No hay tickets propios; se usó Banking77 (mirror `mteb/banking77`, split de prueba, CC BY 4.0, 3,080 consultas de banca
+  escritas por colaboradores, no tickets de una empresa) solo en `evals/golden/privado/` (ignorado por git). Se mapearon 12 de sus
+  77 intenciones a nuestras clases con un criterio mío, no validado por quien opera el negocio: reembolsos → REFUND; cobro doble,
+  pago rechazado, pendiente y revertido → PAYMENT; contraseña olvidada, editar datos, cerrar cuenta → ACCOUNT; llegada y plazo de
+  la tarjeta → DELIVERY; pedir una tarjeta física → ORDER. 300 casos sin duplicados.
+- **Resultado.**
+
+  | | Ollama | TypeSafe | Cascada |
+  |---|---|---|---|
+  | Exactitud | 72.0 % | 81.0 % | 81.0 % |
+  | ECE | 0.119 | 0.099 | 0.109 |
+  | % automatizado | 56.7 % | 76.3 % | 83.0 % |
+  | Exactitud dentro de lo automatizado | 87.6 % | 92.1 % | — |
+  | Destino correcto | 51.7 % | 73.3 % | 76.7 % |
+
+  La cascada ampliada coincide con la básica: no hay clases FEEDBACK/CONTACT en este set.
+- **Lectura.** (1) La meta de ≤ 5 % de error sobre lo automatizado, que se cumplía en Bitext (95.9 %), **aquí no**: 87.6 % con Ollama
+  y 92.1 % con TypeSafe. El umbral calibrado con plantillas de Bitext no transfiere intacto a otra redacción y otro dominio.
+  (2) El peor resultado, ORDER 4 %, es sobre todo un artefacto del mapa (`order_physical_card` es un pedido de tarjeta bancaria que el
+  modelo ve como pago o entrega), así que no se debe leer como defecto de la clase. Sí son señal PAYMENT 82 %/96 % y REFUND 92 %/84 %
+  (Ollama/TypeSafe). (3) TypeSafe es mejor aquí que en Bitext frente a Ollama; la cascada sube la automatización sin subir la exactitud.
+- **Decisión.** No se cambian umbrales ni calibración con esto: el mapa es discutible y las consultas son de otro rubro. Sí se
+  conserva como aviso de que la calibración debe rehacerse con tickets del canal real antes de confiar en el 95 %.
