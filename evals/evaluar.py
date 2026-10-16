@@ -26,7 +26,7 @@ RAIZ = Path(__file__).parent.parent
 sys.path.insert(0, str(RAIZ / "jev"))
 sys.path.insert(0, str(RAIZ / "labs"))
 from evaluar_empresa import anonimizar, es_local  # noqa: E402
-from jev import Jev, Choice, decidir, distribucion, ece, etiquetas, prompt  # noqa: E402
+from jev import Choice, Jev, decidir, distribucion, ece, etiquetas, prompt  # noqa: E402
 
 r10 = importlib.import_module("10_router_jev")
 h11 = importlib.import_module("11_hitl_router")
@@ -251,8 +251,6 @@ async def grabar(casos: list[dict], cal: dict, perfil: str, golden: Path) -> Pat
 
 # ---------- reporte y comparación ----------
 def tabla(filas: dict[str, dict | None]) -> str:
-    def f(m, k, fmt):
-        return fmt(m) if m else "no ejecutado"
     cab = "| Métrica | " + " | ".join(filas) + " |\n|---|" + "---|" * len(filas)
     defs = [("Modelo", lambda m: m["_meta"]["modelo"]),
             ("Exactitud global", lambda m: f"{m['exactitud_global']:.1%}"),

@@ -7,8 +7,8 @@ Golden `golden-v1.jsonl` sha256 `72ccc257ab5e`, 77 casos.
 | Modelo | qwen3:4b-instruct | no ejecutado |
 | Exactitud global | 100.0% | no ejecutado |
 | ECE | 0.026 | no ejecutado |
-| % automatizado | 84.1% | no ejecutado |
-| Críticos a automático | 2 | no ejecutado |
+| % automatizado | 82.6% | no ejecutado |
+| Críticos a automático | 1 | no ejecutado |
 | Latencia mediana / p95 (ms) | 69 / 73 | no ejecutado |
 | Tokens por decisión (ent/sal) | 210 / 1 | no ejecutado |
 | Costo USD por 1,000 decisiones | 0 (local, sin contar energía) | no ejecutado |
