@@ -8,6 +8,7 @@ recalibración). Calibración: data/calibracion-bitext-demo.json (jev/evaluar_em
 import asyncio
 import datetime
 import json
+import re
 import statistics
 import sys
 import time
@@ -57,9 +58,11 @@ def cargar_calibracion(ruta: Path) -> dict:
 
 
 def decidir_ruta(categoria: str, confianza: float, umbral: float, especialistas: dict,
-                 sospechoso: bool = False) -> tuple[str, str]:
+                 sospechoso: bool = False, riesgoso: bool = False) -> tuple[str, str]:
     if sospechoso:
         return "humano", "posible prompt injection"
+    if riesgoso:
+        return "humano", "riesgo legal"
     if confianza < umbral:
         return "humano", "confianza baja"
     if categoria not in especialistas:
@@ -70,6 +73,15 @@ def decidir_ruta(categoria: str, confianza: float, umbral: float, especialistas:
 def es_sospechoso(mensaje: str) -> bool:
     """A cola humana si parece prompt injection o trae caracteres invisibles (la forma típica de evadir el patrón)."""
     return bool({"prompt_injection", "unicode_invisible"} & set(hallazgos(mensaje)))
+
+
+LEGAL = re.compile(r"\b(sue|sued|suing|lawsuit|lawyer|attorney|legal action|demandar|demandaré|abogado|indecopi|denunci\w*)\b",
+                   re.IGNORECASE)
+
+
+def es_riesgoso(mensaje: str) -> bool:
+    """Amenaza legal o regulatoria: la decide una persona, aunque Jev esté seguro de la categoría."""
+    return bool(LEGAL.search(mensaje))
 
 
 def registro(mensaje: str, categoria: str, confianza: float, top2: list, destino: str, motivo: str, ms: int) -> dict:
@@ -96,7 +108,7 @@ async def main() -> None:
             ms = int((time.perf_counter() - t0) * 1000)
             top2 = sorted(d.probs, key=d.probs.get, reverse=True)[:2]
             destino, motivo = decidir_ruta(d.valor, d.confianza, umbral, ESPECIALISTAS,
-                                           sospechoso=es_sospechoso(msg))
+                                           sospechoso=es_sospechoso(msg), riesgoso=es_riesgoso(msg))
             log.write(json.dumps(registro(msg, d.valor, d.confianza, top2, destino, motivo, ms), ensure_ascii=False) + "\n")
             lat_jev.append(ms)
             rutas[destino] = rutas.get(destino, 0) + 1

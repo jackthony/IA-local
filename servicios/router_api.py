@@ -43,7 +43,7 @@ async def decidir(request: Request) -> JSONResponse:
         d = await JEV.preguntar(anonimizar(msg), CAL["pregunta"], TIPO)
         top2 = sorted(d.probs, key=d.probs.get, reverse=True)[:2]
         destino, motivo = r10.decidir_ruta(d.valor, d.confianza, CAL["umbrales"]["0.05"], r10.ESPECIALISTAS,
-                                           sospechoso=r10.es_sospechoso(msg))
+                                           sospechoso=r10.es_sospechoso(msg), riesgoso=r10.es_riesgoso(msg))
         span.set_attributes({"jev.categoria": d.valor, "jev.confianza": round(d.confianza, 3),
                              "ruta.destino": destino, "ruta.motivo": motivo})
     return JSONResponse({"categoria": d.valor, "confianza": round(d.confianza, 3), "top2": top2,

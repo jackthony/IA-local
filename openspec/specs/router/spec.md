@@ -66,3 +66,12 @@ humana con top-2), y la latencia de Jev vs la del especialista.
 #### Scenario: Mensaje normal
 - **WHEN** `es_sospechoso("I was charged twice on my card this month")`
 - **THEN** devuelve `False`
+
+### Requirement: Riesgo legal a humano
+`es_riesgoso(mensaje)` SHALL ser verdadero si el mensaje amenaza con acción legal o regulatoria (demanda, abogado,
+Indecopi). `decidir_ruta(..., riesgoso=True)` SHALL devolver `("humano", "riesgo legal")` justo después de
+`sospechoso` y antes del umbral de confianza. El lab 10, el lab 11 y `servicios/router_api.py` SHALL usarlo.
+
+#### Scenario: Amenaza legal con alta confianza
+- **WHEN** `decidir_ruta("REFUND", 0.99, 0.70, {"REFUND": "pagos"}, riesgoso=True)`
+- **THEN** devuelve `("humano", "riesgo legal")`

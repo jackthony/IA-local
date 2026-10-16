@@ -123,7 +123,8 @@ def evaluar(casos: list[dict], preds: dict[str, dict], cal: dict, meta: dict, pr
     for c in ruteo:
         p = preds[c["id"]]
         d = decidir(tipo, distribucion([(t, lp) for t, lp in p["logprobs"]], etiquetas(tipo), cal["T"]))
-        destino, motivo = r10.decidir_ruta(d.valor, d.confianza, umbral, r10.ESPECIALISTAS, r10.es_sospechoso(c["mensaje"]))
+        destino, motivo = r10.decidir_ruta(d.valor, d.confianza, umbral, r10.ESPECIALISTAS, r10.es_sospechoso(c["mensaje"]),
+                                         r10.es_riesgoso(c["mensaje"]))
         filas.append({"caso": c, "pred": d.valor, "conf": d.confianza, "destino": destino, "motivo": motivo, "ms": p["ms"]})
 
     con_verdad = [f for f in filas if f["caso"]["esperado"] is not None]

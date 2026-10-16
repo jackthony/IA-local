@@ -218,7 +218,7 @@ class Entrada(Executor):
         d = await self.jev.preguntar(caso["mensaje"], self.cal["pregunta"], self.tipo)
         top2 = sorted(d.probs, key=d.probs.get, reverse=True)[:2]
         destino, motivo = r10.decidir_ruta(d.valor, d.confianza, self.cal["umbrales"]["0.05"],
-                                           r10.ESPECIALISTAS, caso["sospechoso"])
+                                           r10.ESPECIALISTAS, caso["sospechoso"], caso.get("riesgoso", False))
         if destino == "humano":
             await ctx.request_info({"tipo": "ruteo", "caso": caso["caso"], "mensaje": caso["mensaje"], "jev": d.valor,
                                     "confianza": round(d.confianza, 3), "sugerencias": top2, "motivo": motivo}, dict)
@@ -316,7 +316,8 @@ async def iniciar() -> None:
         if mapa:
             (BOVEDA / f"{caso}.json").write_text(json.dumps(mapa), encoding="utf-8")
         print(f"> {anon}")
-        r = await construir(storage).run({"caso": caso, "mensaje": anon, "sospechoso": r10.es_sospechoso(msg)})
+        r = await construir(storage).run({"caso": caso, "mensaje": anon, "sospechoso": r10.es_sospechoso(msg),
+                                               "riesgoso": r10.es_riesgoso(msg)})
         await procesar(r, storage, cola)
 
 
