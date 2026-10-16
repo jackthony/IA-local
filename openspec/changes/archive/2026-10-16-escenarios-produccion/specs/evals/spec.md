@@ -12,7 +12,7 @@ a correr si el golden o el prompt de Jev cambiaron desde la grabación.
 - **THEN** el % automatizado cae a 0 y la puerta devuelve violación
 
 ### Requirement: Limitaciones conocidas como trinquete
-Todo caso cuyo destino real difiera del esperado SHALL constar en `golden/limitaciones-vN.json` con el destino
+Todo caso cuyo destino real difiera del esperado SHALL constar en `golden/limitaciones-vN-<perfil>.json` con el destino
 observado y un impacto escrito. La puerta SHALL fallar ante una divergencia nueva, ante un cambio de destino de una
 conocida, y ante una limitación ya resuelta que siga listada.
 

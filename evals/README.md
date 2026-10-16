@@ -7,7 +7,7 @@
   `critico: true` = un error mueve dinero o acceso sin revisión humana.
 - `golden/predicciones-v2-<perfil>.jsonl`: logprobs crudos de Jev, latencia y tokens, grabados con `--grabar`.
   Llevan el SHA-256 del golden y del prompt: si cambian, la corrida falla pidiendo regrabar.
-- `golden/limitaciones-v2.json`: casos cuyo destino real difiere del esperado, con su impacto escrito. La puerta es un
+- `golden/limitaciones-v2-ollama.json`: casos cuyo destino real difiere del esperado, con su impacto escrito. La puerta es un
   trinquete: una divergencia nueva o cambiada falla, y una resuelta obliga a retirarla (ver `DECISIONES.md` §5).
 - `llm_falso.py`: servidor falso compatible con OpenAI que repite estos logprobs; lo usan los escenarios de producción
   (`servicios/test_escenarios.py`, `labs/test_escenarios_hitl.py`).
@@ -16,7 +16,7 @@
 Métricas: exactitud global y por clase (solo casos con categoría verdadera), ECE, % automatizado (sobre los 69
 de ruteo), críticos mal enviados a automático (crítico ruteado a un especialista cuando debía ir a humano, o al
 especialista equivocado) + reembolsos inválidos aceptados, y exactitud de destino (el destino real coincide con el
-esperado; hoy 92.8 %, las 5 divergencias están en `limitaciones-v2.json`).
+esperado; hoy 92.8 %, las 5 divergencias están en `limitaciones-v2-ollama.json`).
 
 ## Perfiles de modelo (solo variables de entorno)
 

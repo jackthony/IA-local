@@ -50,7 +50,7 @@ uv run python evals/evaluar.py --grabar    # mide en vivo con el modelo de LLM_B
 compatible con OpenAI (sin LLM, corre en CI): `servicios/test_escenarios.py` (HTTP, auth, PII, modelo caído o lento,
 telemetría sin contenido) y `labs/test_escenarios_hitl.py` (reembolsos, checkpoints, cola y ledger del lab 11).
 `servicios/test_escenarios.py --vivo` repite los escenarios del router contra el modelo real para detectar deriva.
-Las divergencias de destino que se aceptan están listadas con su impacto en `evals/golden/limitaciones-v2.json`.
+Las divergencias de destino que se aceptan están listadas con su impacto en `evals/golden/limitaciones-v2-ollama.json`.
 
 ## Producción local con Docker (MacBook)
 

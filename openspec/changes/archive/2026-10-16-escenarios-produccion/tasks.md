@@ -5,7 +5,7 @@
 
 ## 2. Implementación
 - [x] 2.1 router_api: `consultar_jev`, `JevNoDisponible`, 503, `JEV_TIMEOUT_S`; `Jev(timeout, reintentos)`
-- [x] 2.2 evals: `exactitud_destino`, `divergencias_destino`, `contrastar_limitaciones`, `limitaciones-v2.json`
+- [x] 2.2 evals: `exactitud_destino`, `divergencias_destino`, `contrastar_limitaciones`, `limitaciones-v2-ollama.json`
 - [x] 2.3 evals/llm_falso.py compartido; `ingresar()` extraído en el lab 11
 - [x] 2.4 CI: ambos archivos de escenarios en el paso de tests
 

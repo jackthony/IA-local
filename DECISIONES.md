@@ -71,7 +71,7 @@ Formato: contexto → decisión → por qué → qué cuesta → cómo se verifi
   con 0.68 y 0.63 de confianza); tres son mensajes fuera de dominio ("hello", el clima) que salen a un especialista,
   dos con 0.97: el 4B es sobreconfiado fuera de dominio y la temperatura no lo corrige.
 - **Decisión.** No se relajó el escenario ni se añadió una regla por mensaje. Cada divergencia consta en
-  `evals/golden/limitaciones-v2.json` con su impacto, y la puerta funciona como trinquete: una divergencia nueva
+  `evals/golden/limitaciones-v2-ollama.json` con su impacto, y la puerta funciona como trinquete: una divergencia nueva
   falla, una que cambia de destino falla, y una resuelta obliga a retirarla del archivo.
 - **Por qué.** Una regla por mensaje sobreajusta al golden y no generaliza; un umbral laxo (p. ej. 92 % de destino)
   deja entrar un empeoramiento hasta ese piso. El trinquete mantiene la deuda visible y solo permite mejorarla.
@@ -79,7 +79,25 @@ Formato: contexto → decisión → por qué → qué cuesta → cómo se verifi
   ejemplos); queda como mitigación pendiente.
 - **Verificación.** `evals/test_evals.py` y `servicios/test_escenarios.py` (la lista debe coincidir exacta).
 
-## 6. Decisiones menores relacionadas
+## 6. Un modelo en la nube no sirve como Jev solo por ser compatible con OpenAI
+
+- **Contexto.** Se grabó el golden con `deepseek-chat` (API compatible con OpenAI, el único proveedor en la nube con
+  logprobs entre los disponibles; la API de Claude no los expone). Resultado: 91.2 % de exactitud, 1 s de latencia
+  (15× la de Ollama local) y dos problemas de fondo, ambos medidos en `evals/golden/predicciones-v2-deepseek.jsonl`.
+- **Logprobs degenerados.** El primer token trae 0.0 y todos los demás -9999: no hay distribución, la confianza es
+  binaria. Con eso `umbral_auto`, la temperatura y el ECE pierden sentido (el ECE de 0.008 es una coincidencia de
+  errores, no calibración). La tabla lo muestra en la fila "Logprobs degenerados".
+- **Tokenización.** DeepSeek escribe `CANCEL` como `C`+`ANCEL`; `distribucion` descarta los tokens que son prefijo de
+  más de una opción (`C` también lo es de `CONTACT`) y cae a uniforme: CANCEL queda 0/5. Es un límite del puntaje
+  por primer token, no un error del modelo: depende de cómo el tokenizador parte los nombres de las opciones.
+- **Decisión.** DeepSeek no entra como Jev del router; la comparación queda documentada tal cual, sin recalibrar para
+  que salga bien. Las limitaciones conocidas pasan a ser **por perfil** (`limitaciones-v2-<perfil>.json`): antes la
+  puerta aplicaba las de Ollama a otro modelo.
+- **Cuesta / pendiente.** Un Jev en la nube exigiría etiquetas con primer token único (códigos en lugar de nombres) y
+  un proveedor con logprobs reales; no se probó. Claude y DeepSeek sí caben como especialistas (System 2).
+- **Verificación.** `evals/evaluar.py --comparar` y `evals/test_evals.py`.
+
+## 7. Decisiones menores relacionadas
 
 - **Reembolso: el LLM propone, el humano aprueba los argumentos exactos, el código ejecuta** (`proto_aprobacion.py`),
   con política de montos en código (`MAX_REEMBOLSO`) y operación idempotente. Aprobación humana no sustituye política.

@@ -47,8 +47,9 @@ def ruta_predicciones(perfil: str, golden: Path = GOLDEN) -> Path:
     return golden.with_name(f"predicciones-{golden.stem.removeprefix('golden-')}-{perfil}.jsonl")
 
 
-def ruta_limitaciones(golden: Path = GOLDEN) -> Path:
-    return golden.with_name(f"limitaciones-{golden.stem.removeprefix('golden-')}.json")
+def ruta_limitaciones(golden: Path = GOLDEN, perfil: str = "ollama") -> Path:
+    """Las divergencias dependen del modelo: cada perfil lleva las suyas."""
+    return golden.with_name(f"limitaciones-{golden.stem.removeprefix('golden-')}-{perfil}.json")
 
 
 def cargar_limitaciones(ruta: Path) -> dict[str, dict]:
@@ -177,6 +178,8 @@ def evaluar(casos: list[dict], preds: dict[str, dict], cal: dict, meta: dict, pr
                                         max(1, sum(1 for f in auto if f["caso"]["esperado"])), 4),
         "criticos": {"n_ruteo": sum(f["caso"]["critico"] for f in filas), "n_reembolso": sum(c["critico"] for c in reembolsos),
                      "mal_a_automatico": criticos_mal, "reembolsos_invalidos_aceptados": aceptados},
+        "logprobs_degenerados": round(sum(len(p["logprobs"]) > 1 and all(lp <= -999 for _, lp in p["logprobs"][1:])
+                                          for p in (preds[f["caso"]["id"]] for f in filas)) / len(filas), 4),
         "exactitud_destino": round(1 - len(divergencias) / len(filas), 4),
         "divergencias_destino": divergencias,
         "exactitud_reembolso": round(sum(ok_reembolso) / len(ok_reembolso), 4) if ok_reembolso else None,
@@ -293,6 +296,7 @@ def tabla(filas: dict[str, dict | None]) -> str:
     cab = "| Métrica | " + " | ".join(filas) + " |\n|---|" + "---|" * len(filas)
     defs = [("Modelo", lambda m: m["_meta"]["modelo"]),
             ("Exactitud global", lambda m: f"{m['exactitud_global']:.1%}"),
+            ("Logprobs degenerados (sin distribución real)", lambda m: f"{m['logprobs_degenerados']:.0%}"),
             ("ECE", lambda m: f"{m['ece']:.3f}"),
             ("% automatizado", lambda m: f"{m['pct_automatizado']:.1%}"),
             ("Críticos a automático", lambda m: str(len(m["criticos"]["mal_a_automatico"]))),
@@ -345,7 +349,10 @@ def main() -> int:
         print(f"sin predicciones para {a.perfil}: corre con --grabar", file=sys.stderr)
         return 2
     u = cargar_umbrales(a.umbrales)
-    violaciones = compuerta(m, u, cargar_limitaciones(ruta_limitaciones(a.golden)))
+    lim = ruta_limitaciones(a.golden, a.perfil)
+    if not lim.exists():
+        print(f"sin {lim.name}: las divergencias de destino se informan pero no se contrastan", file=sys.stderr)
+    violaciones = compuerta(m, u, cargar_limitaciones(lim) if lim.exists() else None)
     informe = {"fecha": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
                "perfil": a.perfil, "modo": "vivo" if a.grabar else "repeticion",
                "golden": {"archivo": a.golden.name, "sha256": golden_sha, "casos": len(casos)},

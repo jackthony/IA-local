@@ -75,6 +75,18 @@ def test_limitacion_sin_impacto_es_invalida() -> None:
             assert "impacto" in str(e)
 
 
+def test_logprobs_degenerados_se_detectan() -> None:
+    assert medir()["logprobs_degenerados"] == 0
+    rotos = {k: {**v, "logprobs": [[v["logprobs"][0][0], 0.0]] + [[t, -9999.0] for t, _ in v["logprobs"][1:]]}
+             for k, v in PREDS.items()}
+    assert medir(preds=rotos)["logprobs_degenerados"] == 1.0
+
+
+def test_limitaciones_son_por_perfil() -> None:
+    assert ev.ruta_limitaciones(perfil="ollama").name == "limitaciones-v2-ollama.json"
+    assert ev.ruta_limitaciones(perfil="deepseek") != ev.ruta_limitaciones(perfil="ollama")
+
+
 def test_umbral_alto_manda_todo_a_humano() -> None:
     cal = copy.deepcopy(CAL)
     cal["umbrales"]["0.05"] = 1.01

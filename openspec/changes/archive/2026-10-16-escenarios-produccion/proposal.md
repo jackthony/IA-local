@@ -17,7 +17,7 @@ convertir sus casos en escenarios de producción de extremo a extremo (HTTP -> a
   `JevNoDisponible`; el endpoint responde **503** `{error, destino: "humano", motivo: "jev no disponible"}`. Plazo por
   `JEV_TIMEOUT_S` (10 s) y sin reintentos ocultos.
 - `jev/jev.py`: `Jev(timeout=, reintentos=)` opcionales (por defecto, el comportamiento del cliente OpenAI).
-- `evals/`: `exactitud_destino` y `divergencias_destino` en el reporte; `golden/limitaciones-v2.json` registra cada
+- `evals/`: `exactitud_destino` y `divergencias_destino` en el reporte; `golden/limitaciones-v2-ollama.json` registra cada
   divergencia aceptada con su impacto y la puerta actúa como **trinquete**: una divergencia nueva o cambiada falla, y
   una resuelta obliga a retirarla del archivo. `llm_falso.py`: servidor falso compatible con OpenAI.
 - `servicios/test_escenarios.py` (69 escenarios del golden + propiedades de producción; `--vivo` contra el modelo real)
