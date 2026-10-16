@@ -32,6 +32,12 @@ uv run python evals/evaluar.py --perfil deepseek --grabar
 uv run python evals/evaluar.py --comparar        # escribe evals/COMPARACION.md
 ```
 
+**Control de gasto (solo nube).** `--grabar` cuenta llamadas y tokens, y corta *antes* de la llamada que pasaría un tope,
+sin dejar archivo parcial. Por defecto el tope de llamadas es el que la corrida necesita (70); ajusta con
+`GRABAR_MAX_LLAMADAS`, `GRABAR_MAX_TOKENS` y `GRABAR_MAX_USD` (este exige los precios `PRECIO_*_USD_1M`: sin ellos el gasto
+no se estima). Cada grabación deja una línea en `evals/reportes/uso.jsonl` (no versionado). Para limitar el gasto en el
+proveedor, además de este tope, fija un límite mensual en su consola.
+
 `--grabar` se niega si el perfil no coincide con `LLM_BASE_URL` (no guarda datos de nube bajo "ollama").
 El costo por 1,000 decisiones usa los tokens medidos y los precios de TU contrato (`PRECIO_*_USD_1M`); no se asumen.
 Local = 0 sin contar hardware ni energía.

@@ -87,6 +87,56 @@ def test_limitaciones_son_por_perfil() -> None:
     assert ev.ruta_limitaciones(perfil="deepseek") != ev.ruta_limitaciones(perfil="ollama")
 
 
+def test_presupuesto() -> None:
+    import os
+    for k in ("GRABAR_MAX_LLAMADAS", "GRABAR_MAX_TOKENS", "GRABAR_MAX_USD"):
+        os.environ.pop(k, None)
+    local = ev.Presupuesto(True, 70)
+    for _ in range(500):  # local: sin tope
+        local.antes_de_llamar()
+        local.registrar(200, 1)
+    nube = ev.Presupuesto(False, 3)  # por defecto, solo las llamadas necesarias
+    for _ in range(3):
+        nube.antes_de_llamar()
+        nube.registrar(200, 1)
+    try:
+        nube.antes_de_llamar()
+        raise AssertionError("debió cortar al pasar el tope de llamadas")
+    except ev.PresupuestoExcedido:
+        pass
+    os.environ["GRABAR_MAX_LLAMADAS"] = "2"
+    try:
+        ev.Presupuesto(False, 3)
+        raise AssertionError("tope menor que lo necesario debió abortar al inicio")
+    except ev.PresupuestoExcedido:
+        pass
+    os.environ.pop("GRABAR_MAX_LLAMADAS")
+    os.environ["GRABAR_MAX_TOKENS"] = "500"
+    t = ev.Presupuesto(False, 10)
+    t.antes_de_llamar(); t.registrar(300, 1)
+    t.antes_de_llamar(); t.registrar(190, 1)
+    try:
+        t.antes_de_llamar(t_in_estimado=50)
+        raise AssertionError("debió cortar por tokens")
+    except ev.PresupuestoExcedido:
+        pass
+    os.environ.pop("GRABAR_MAX_TOKENS")
+    os.environ["GRABAR_MAX_USD"] = "1"
+    try:
+        ev.Presupuesto(False, 3, {"entrada_1m": None, "salida_1m": None})
+        raise AssertionError("USD sin precios debió fallar")
+    except ValueError:
+        pass
+    u = ev.Presupuesto(False, 10, {"entrada_1m": 1_000_000.0, "salida_1m": 0.0})  # 1 USD por token de entrada
+    u.antes_de_llamar(); u.registrar(1, 0)
+    try:
+        u.antes_de_llamar()
+        raise AssertionError("debió cortar por USD")
+    except ev.PresupuestoExcedido:
+        pass
+    os.environ.pop("GRABAR_MAX_USD")
+
+
 def test_umbral_alto_manda_todo_a_humano() -> None:
     cal = copy.deepcopy(CAL)
     cal["umbrales"]["0.05"] = 1.01

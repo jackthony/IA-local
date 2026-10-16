@@ -246,6 +246,51 @@ def compuerta(m: dict, u: dict, conocidas: dict[str, dict] | None = None) -> lis
     return v
 
 
+# ---------- control de gasto ----------
+class PresupuestoExcedido(RuntimeError):
+    pass
+
+
+class Presupuesto:
+    """Tope de llamadas, tokens y USD para una grabación en la nube. Corta ANTES de la llamada que lo pasaría.
+
+    Se configura por env (GRABAR_MAX_LLAMADAS, GRABAR_MAX_TOKENS, GRABAR_MAX_USD). Local = sin tope. En la nube el tope de
+    llamadas es obligatorio (por defecto, las que la corrida necesita); el de USD exige precios, y sin ellos no se asume.
+    """
+
+    def __init__(self, local: bool, necesarias: int, precios: dict | None = None) -> None:
+        def f(k: str) -> float | None:
+            v = os.getenv(k)
+            return float(v) if v else None
+        self.local, self.precios = local, precios or {}
+        self.max_llamadas = None if local else int(f("GRABAR_MAX_LLAMADAS") or necesarias)
+        self.max_tokens, self.max_usd = (None, None) if local else (f("GRABAR_MAX_TOKENS"), f("GRABAR_MAX_USD"))
+        if self.max_usd is not None and (self.precios.get("entrada_1m") is None or self.precios.get("salida_1m") is None):
+            raise ValueError("GRABAR_MAX_USD exige PRECIO_ENTRADA_USD_1M y PRECIO_SALIDA_USD_1M: el gasto no se estima sin precios")
+        if self.max_llamadas is not None and self.max_llamadas < necesarias:
+            raise PresupuestoExcedido(f"la corrida necesita {necesarias} llamadas y GRABAR_MAX_LLAMADAS es {self.max_llamadas}")
+        self.llamadas = self.t_in = self.t_out = 0
+
+    @property
+    def usd(self) -> float | None:
+        if self.precios.get("entrada_1m") is None or self.precios.get("salida_1m") is None:
+            return None
+        return (self.t_in * self.precios["entrada_1m"] + self.t_out * self.precios["salida_1m"]) / 1e6
+
+    def antes_de_llamar(self, t_in_estimado: int = 0) -> None:
+        if self.max_llamadas is not None and self.llamadas + 1 > self.max_llamadas:
+            raise PresupuestoExcedido(f"tope de {self.max_llamadas} llamadas alcanzado")
+        if self.max_tokens is not None and self.t_in + self.t_out + t_in_estimado > self.max_tokens:
+            raise PresupuestoExcedido(f"tope de {int(self.max_tokens)} tokens alcanzado ({self.t_in + self.t_out} usados)")
+        if self.max_usd is not None and self.usd is not None and self.usd >= self.max_usd:
+            raise PresupuestoExcedido(f"tope de USD {self.max_usd} alcanzado ({self.usd:.4f} gastados)")
+
+    def registrar(self, t_in: int, t_out: int) -> None:
+        self.llamadas += 1
+        self.t_in += t_in
+        self.t_out += t_out
+
+
 # ---------- grabación en vivo ----------
 class JevMedido(Jev):
     """Jev que además conserva los tokens de la última llamada (para el costo). Misma petición que Jev.logprobs."""
@@ -274,18 +319,31 @@ async def grabar(casos: list[dict], cal: dict, perfil: str, golden: Path) -> Pat
     modelo = os.getenv("LLM_MODEL") or cal["modelo"]
     jev = JevMedido(modelo, t=cal["T"], base_url=base, rotulo=cal["rotulo"])
     tipo = Choice(tuple(cal["opciones"]), tuple(cal["descripciones"]) if cal.get("descripciones") else None)
+    ruteo = [c for c in casos if c["tipo"] == "ruteo"]
+    presupuesto = Presupuesto(local, len(ruteo) + 1, precios_env())  # +1 del calentamiento
+    presupuesto.antes_de_llamar()
     await jev.logprobs("warm-up", cal["pregunta"], tipo)  # carga en frío del modelo fuera de la medición
+    presupuesto.registrar(*jev.uso)
     salida = []
-    for c in (c for c in casos if c["tipo"] == "ruteo"):
+    for c in ruteo:
+        presupuesto.antes_de_llamar()  # corta antes de la llamada que pasaría el tope; sin archivo parcial
         t0 = time.perf_counter()
         top = await jev.logprobs(anonimizar(c["mensaje"]), cal["pregunta"], tipo)  # PII fuera antes del modelo
         ms = int((time.perf_counter() - t0) * 1000)
+        presupuesto.registrar(*jev.uso)
         salida.append({"id": c["id"], "logprobs": [[t, round(lp, 6)] for t, lp in top], "ms": ms,
                        "tokens_in": jev.uso[0], "tokens_out": jev.uso[1]})
         print(f"  {c['id']:<14} {ms:>5} ms")
     meta = {"perfil": perfil, "modelo": modelo, "origen": origen_publico(base), "local": local,
             "golden_sha256": sha256(golden), "prompt_sha256": huella_prompt(cal), "T_grabada": cal["T"],
             "fecha": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"), "n": len(salida)}
+    REPORTES.mkdir(parents=True, exist_ok=True)  # bitácora de gasto: una línea por grabación
+    with (REPORTES / "uso.jsonl").open("a", encoding="utf-8") as f:
+        f.write(json.dumps({"fecha": meta["fecha"], "perfil": perfil, "modelo": modelo, "llamadas": presupuesto.llamadas,
+                            "tokens_in": presupuesto.t_in, "tokens_out": presupuesto.t_out,
+                            "usd": None if presupuesto.usd is None else round(presupuesto.usd, 6)}) + "\n")
+    print(f"uso: {presupuesto.llamadas} llamadas, {presupuesto.t_in}+{presupuesto.t_out} tokens"
+          + ("" if presupuesto.usd is None else f", USD {presupuesto.usd:.4f}"))
     destino = ruta_predicciones(perfil, golden)
     destino.write_text("\n".join(json.dumps(x, ensure_ascii=False) for x in [{"meta": meta}, *salida]) + "\n", encoding="utf-8")
     return destino
@@ -330,7 +388,11 @@ def main() -> int:
     casos = cargar_golden(a.golden, cal["opciones"])
     if a.grabar:
         print(f"grabando {a.perfil} ({sum(c['tipo'] == 'ruteo' for c in casos)} casos de ruteo)")
-        print("guardado:", asyncio.run(grabar(casos, cal, a.perfil, a.golden)))
+        try:
+            print("guardado:", asyncio.run(grabar(casos, cal, a.perfil, a.golden)))
+        except (PresupuestoExcedido, ValueError) as e:
+            print(f"ABORTADO sin guardar: {e}", file=sys.stderr)
+            return 2
     golden_sha, precios = sha256(a.golden), precios_env()
     if a.comparar:
         res = {p: calcular_perfil(p, casos, golden_sha, cal, a.golden, precios) for p in PERFILES}
