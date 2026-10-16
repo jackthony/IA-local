@@ -97,7 +97,21 @@ Formato: contexto → decisión → por qué → qué cuesta → cómo se verifi
   un proveedor con logprobs reales; no se probó. Claude y DeepSeek sí caben como especialistas (System 2).
 - **Verificación.** `evals/evaluar.py --comparar` y `evals/test_evals.py`.
 
-## 7. Decisiones menores relacionadas
+## 7. El Jev alojado se mide con el mismo golden, con sus probabilidades y sin recalibrar
+
+- **Contexto.** `jev/` es una versión propia del concepto "System One"; TypeSafe ofrece el original como servicio
+  (`POST /v1/systemone`, Bearer, probabilidades calibradas por opción, tokens de uso en la respuesta).
+- **Decisión.** Perfil `typesafe` en `evals/` con un cliente mínimo (`jev/typesafe.py`, solo `httpx`, sin SDK nuevo):
+  se guardan sus `probabilidades` y se aplica el mismo `decidir_ruta` y el mismo golden. No se usa su `confidence`, que
+  es `(p_max − 1/n)/(1 − 1/n)` y no la probabilidad de acierto que `umbral_auto` necesita.
+- **Por qué sin recalibrar.** Calibrar con el propio golden sería fuga de datos. El umbral 0.7033 es de otro modelo, así
+  que los números de ECE y automatización de este perfil se leen como indicativos hasta recalibrar con datos aparte.
+- **Controles.** La clave solo por env (nunca en errores, bitácoras ni predicciones); errores sin cuerpo (un servicio
+  puede repetir el estado enviado); reintento con backoff solo en 429/529; la respuesta se valida (opciones ajenas o
+  masa ≠ 1 son error); PII anonimizada antes de salir; topes de llamadas/tokens/USD con corte previo (`Presupuesto`).
+- **Verificación.** `evals/test_typesafe.py` contra un servicio falso, incluida la grabación completa.
+
+## 8. Decisiones menores relacionadas
 
 - **Reembolso: el LLM propone, el humano aprueba los argumentos exactos, el código ejecuta** (`proto_aprobacion.py`),
   con política de montos en código (`MAX_REEMBOLSO`) y operación idempotente. Aprobación humana no sustituye política.

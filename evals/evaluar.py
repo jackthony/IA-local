@@ -27,6 +27,7 @@ sys.path.insert(0, str(RAIZ / "jev"))
 sys.path.insert(0, str(RAIZ / "labs"))
 from evaluar_empresa import anonimizar, es_local  # noqa: E402
 from jev import Choice, Jev, decidir, distribucion, ece, etiquetas, prompt  # noqa: E402
+from typesafe import TypeSafeJev, solicitud  # noqa: E402
 
 r10 = importlib.import_module("10_router_jev")
 h11 = importlib.import_module("11_hitl_router")
@@ -34,7 +35,7 @@ h11 = importlib.import_module("11_hitl_router")
 GOLDEN = RAIZ / "evals" / "golden" / "golden-v2.jsonl"
 UMBRALES = RAIZ / "evals" / "umbrales.json"
 REPORTES = RAIZ / "evals" / "reportes"
-PERFILES = ("ollama", "deepseek")
+PERFILES = ("ollama", "deepseek", "typesafe")
 CLAVES_UMBRAL = ("min_exactitud_global", "min_exactitud_clase", "max_ece", "min_pct_automatizado",
                  "max_criticos_automaticos", "min_exactitud_reembolso")
 
@@ -99,9 +100,11 @@ def cargar_umbrales(ruta: Path) -> dict:
     return u
 
 
-def huella_prompt(cal: dict) -> str:
-    """Hash del prompt real de Jev para esta calibración: si cambia, los logprobs grabados ya no aplican."""
+def huella_prompt(cal: dict, backend: str = "openai") -> str:
+    """Hash de lo que se le pide al modelo (prompt local o cuerpo del servicio): si cambia, lo grabado ya no aplica."""
     tipo = Choice(tuple(cal["opciones"]), tuple(cal["descripciones"]) if cal.get("descripciones") else None)
+    if backend == "typesafe":
+        return hashlib.sha256(json.dumps(solicitud("<mensaje>", cal["pregunta"], tipo, "-"), sort_keys=True).encode()).hexdigest()
     return hashlib.sha256(json.dumps(prompt("<mensaje>", cal["pregunta"], tipo, cal["rotulo"]),
                                      sort_keys=True).encode()).hexdigest()
 
@@ -116,7 +119,7 @@ def cargar_predicciones(ruta: Path) -> tuple[dict, dict[str, dict]]:
 def verificar_frescura(meta: dict, golden_sha: str, cal: dict, casos: list[dict], preds: dict) -> None:
     if meta["golden_sha256"] != golden_sha:
         raise ValueError("el golden set cambió desde que se grabaron las predicciones: regrábalas con --grabar")
-    if meta["prompt_sha256"] != huella_prompt(cal):
+    if meta["prompt_sha256"] != huella_prompt(cal, meta.get("backend", "openai")):
         raise ValueError("el prompt de Jev o sus opciones cambiaron: regraba las predicciones con --grabar")
     faltan = [c["id"] for c in casos if c["tipo"] == "ruteo" and c["id"] not in preds]
     if faltan:
@@ -127,6 +130,13 @@ def verificar_frescura(meta: dict, golden_sha: str, cal: dict, casos: list[dict]
 def pct(valores: list[float], q: float) -> float:
     s = sorted(valores)
     return s[min(len(s) - 1, math.ceil(q * len(s)) - 1)]
+
+
+def dist_de(p: dict, tipo: Choice, cal: dict) -> dict[str, float]:
+    """Distribución de una predicción: probabilidades del servicio tal cual, o logprobs crudos con la T de la calibración."""
+    if "probabilidades" in p:
+        return {o: p["probabilidades"].get(o, 0.0) for o in tipo.opciones}
+    return distribucion([(t, lp) for t, lp in p["logprobs"]], etiquetas(tipo), cal["T"])
 
 
 def destino_esperado(caso: dict) -> str:
@@ -140,7 +150,7 @@ def evaluar(casos: list[dict], preds: dict[str, dict], cal: dict, meta: dict, pr
     filas = []
     for c in ruteo:
         p = preds[c["id"]]
-        d = decidir(tipo, distribucion([(t, lp) for t, lp in p["logprobs"]], etiquetas(tipo), cal["T"]))
+        d = decidir(tipo, dist_de(p, tipo, cal))
         destino, motivo = r10.decidir_ruta(d.valor, d.confianza, umbral, r10.ESPECIALISTAS, r10.es_sospechoso(c["mensaje"]),
                                          r10.es_riesgoso(c["mensaje"]))
         filas.append({"caso": c, "pred": d.valor, "conf": d.confianza, "destino": destino, "motivo": motivo, "ms": p["ms"]})
@@ -178,7 +188,7 @@ def evaluar(casos: list[dict], preds: dict[str, dict], cal: dict, meta: dict, pr
                                         max(1, sum(1 for f in auto if f["caso"]["esperado"])), 4),
         "criticos": {"n_ruteo": sum(f["caso"]["critico"] for f in filas), "n_reembolso": sum(c["critico"] for c in reembolsos),
                      "mal_a_automatico": criticos_mal, "reembolsos_invalidos_aceptados": aceptados},
-        "logprobs_degenerados": round(sum(len(p["logprobs"]) > 1 and all(lp <= -999 for _, lp in p["logprobs"][1:])
+        "logprobs_degenerados": round(sum(len(p.get("logprobs", [])) > 1 and all(lp <= -999 for _, lp in p["logprobs"][1:])
                                           for p in (preds[f["caso"]["id"]] for f in filas)) / len(filas), 4),
         "exactitud_destino": round(1 - len(divergencias) / len(filas), 4),
         "divergencias_destino": divergencias,
@@ -311,31 +321,43 @@ def origen_publico(url: str) -> str:
 
 
 async def grabar(casos: list[dict], cal: dict, perfil: str, golden: Path) -> Path:
-    base = os.getenv("LLM_BASE_URL", "http://localhost:11434/v1")
-    local = es_local(base)
-    if (perfil == "ollama") != local:
-        raise ValueError(f"perfil {perfil!r} no coincide con LLM_BASE_URL ({origen_publico(base)}): "
-                         "no se graban datos bajo el perfil equivocado")
-    modelo = os.getenv("LLM_MODEL") or cal["modelo"]
-    jev = JevMedido(modelo, t=cal["T"], base_url=base, rotulo=cal["rotulo"])
     tipo = Choice(tuple(cal["opciones"]), tuple(cal["descripciones"]) if cal.get("descripciones") else None)
+    if perfil == "typesafe":  # servicio alojado: devuelve probabilidades calibradas, no logprobs
+        jev, backend, local = TypeSafeJev(), "typesafe", False
+        base, modelo = jev.url, jev.modelo
+
+        async def pedir(estado: str) -> dict:
+            probs = await jev.consultar(estado, cal["pregunta"], tipo)
+            return {"probabilidades": {o: round(p, 6) for o, p in probs.items()}}
+    else:
+        base = os.getenv("LLM_BASE_URL", "http://localhost:11434/v1")
+        local, backend = es_local(base), "openai"
+        if (perfil == "ollama") != local:
+            raise ValueError(f"perfil {perfil!r} no coincide con LLM_BASE_URL ({origen_publico(base)}): "
+                             "no se graban datos bajo el perfil equivocado")
+        modelo = os.getenv("LLM_MODEL") or cal["modelo"]
+        jev = JevMedido(modelo, t=cal["T"], base_url=base, rotulo=cal["rotulo"])
+
+        async def pedir(estado: str) -> dict:
+            top = await jev.logprobs(estado, cal["pregunta"], tipo)
+            return {"logprobs": [[t, round(lp, 6)] for t, lp in top]}
     ruteo = [c for c in casos if c["tipo"] == "ruteo"]
     presupuesto = Presupuesto(local, len(ruteo) + 1, precios_env())  # +1 del calentamiento
     presupuesto.antes_de_llamar()
-    await jev.logprobs("warm-up", cal["pregunta"], tipo)  # carga en frío del modelo fuera de la medición
+    await pedir("warm-up")  # carga en frío / conexión fuera de la medición
     presupuesto.registrar(*jev.uso)
     salida = []
     for c in ruteo:
         presupuesto.antes_de_llamar()  # corta antes de la llamada que pasaría el tope; sin archivo parcial
         t0 = time.perf_counter()
-        top = await jev.logprobs(anonimizar(c["mensaje"]), cal["pregunta"], tipo)  # PII fuera antes del modelo
+        resultado = await pedir(anonimizar(c["mensaje"]))  # PII fuera antes del modelo
         ms = int((time.perf_counter() - t0) * 1000)
         presupuesto.registrar(*jev.uso)
-        salida.append({"id": c["id"], "logprobs": [[t, round(lp, 6)] for t, lp in top], "ms": ms,
-                       "tokens_in": jev.uso[0], "tokens_out": jev.uso[1]})
+        salida.append({"id": c["id"], **resultado, "ms": ms, "tokens_in": jev.uso[0], "tokens_out": jev.uso[1]})
         print(f"  {c['id']:<14} {ms:>5} ms")
-    meta = {"perfil": perfil, "modelo": modelo, "origen": origen_publico(base), "local": local,
-            "golden_sha256": sha256(golden), "prompt_sha256": huella_prompt(cal), "T_grabada": cal["T"],
+    meta = {"perfil": perfil, "backend": backend, "modelo": getattr(jev, "modelo_servido", "") or modelo,
+            "origen": origen_publico(base), "local": local,
+            "golden_sha256": sha256(golden), "prompt_sha256": huella_prompt(cal, backend), "T_grabada": cal["T"],
             "fecha": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"), "n": len(salida)}
     REPORTES.mkdir(parents=True, exist_ok=True)  # bitácora de gasto: una línea por grabación
     with (REPORTES / "uso.jsonl").open("a", encoding="utf-8") as f:

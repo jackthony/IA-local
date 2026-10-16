@@ -32,6 +32,20 @@ uv run python evals/evaluar.py --perfil deepseek --grabar
 uv run python evals/evaluar.py --comparar        # escribe evals/COMPARACION.md
 ```
 
+**Jev alojado de TypeSafe** (`--perfil typesafe`): no es OpenAI-compatible, usa `POST /v1/systemone` (`jev/typesafe.py`, solo
+`httpx`). Devuelve probabilidades por opción, que se guardan tal cual (`probabilidades`, sin logprobs ni temperatura):
+
+```bash
+cp perfiles/typesafe.env.example ~/mi-typesafe.env   # rellena TYPESAFE_API_KEY (y precios si quieres costo)
+set -a; source ~/mi-typesafe.env; set +a
+uv run python evals/evaluar.py --perfil typesafe --grabar
+uv run python evals/evaluar.py --comparar
+```
+
+Se usan sus `probabilities`, no su `confidence`: esa es `(p_max - 1/n)/(1 - 1/n)`, una medida de dispersión, no la
+probabilidad de acierto. El umbral de ruteo de la calibración local (0.7033) se aplica **sin recalibrar**, así que ECE y
+% automatizado de este perfil son indicativos; recalibra con datos propios antes de decidir con ellos.
+
 **Control de gasto (solo nube).** `--grabar` cuenta llamadas y tokens, y corta *antes* de la llamada que pasaría un tope,
 sin dejar archivo parcial. Por defecto el tope de llamadas es el que la corrida necesita (70); ajusta con
 `GRABAR_MAX_LLAMADAS`, `GRABAR_MAX_TOKENS` y `GRABAR_MAX_USD` (este exige los precios `PRECIO_*_USD_1M`: sin ellos el gasto
