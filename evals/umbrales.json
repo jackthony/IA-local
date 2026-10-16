@@ -1,0 +1,9 @@
+{
+  "_nota": "Medido con qwen3:4b-instruct el 2026-10-16: exactitud 100 %, ECE 0.026, automatizado 84.1 %, 2 criticos a automatico (ambiguo-03, ambiguo-06). max_criticos_automaticos=2 es la linea base actual, NO la meta: bajarlo a 0 cuando el router ataje montos altos y amenazas legales.",
+  "min_exactitud_global": 0.90,
+  "min_exactitud_clase": 0.80,
+  "max_ece": 0.08,
+  "min_pct_automatizado": 0.75,
+  "max_criticos_automaticos": 2,
+  "min_exactitud_reembolso": 1.0
+}

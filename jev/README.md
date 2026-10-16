@@ -64,6 +64,11 @@ No sirve para: redactar respuestas, razonamiento multi-paso, tareas abiertas (ah
 
 ## Evaluación con dataset de Kaggle (zero trust)
 
+**Qué se aprendió, en una línea:** en este dataset ningún método (Jev 4B/8B, Naive Bayes, LLM generativo) pasa de
+~27 % porque las **etiquetas son ruido**, no porque el modelo sea malo; y precisamente por eso sirve como prueba de
+que Jev, con umbral derivado del error tolerado, **no rutea mal en silencio**: automatiza ~0 % y manda todo a humano.
+Para medir valor hace falta un dataset con etiquetas consistentes (ver Bitext más abajo).
+
 Fuente: "Customer IT Support - Ticket Dataset" (Tobias Bueck), espejo del autor en Hugging Face, archivo
 `dataset-tickets-multi-lang-4-20k.csv` fijado al commit `ddf1c81`. **Sintético**, CC BY-NC 4.0 (solo evaluación).
 
@@ -82,7 +87,8 @@ Diagnóstico (inglés, 10 colas, misma muestra: 80 calibración / 120 evaluació
 | Jev 8B con descripciones | 26 % | 43 % | 0.138 | 0 % | 7.4 |
 | LLM generativo 4B (corrida previa, 150 tickets) | 27 % | — | sin confianza | — | 3.7 |
 
-Conclusión: **el cuello de botella son las etiquetas, no el modelo.**
+Conclusión (con la evidencia):
+- **El cuello de botella son las etiquetas, no el modelo.**
 - Un clasificador supervisado con 11.7k ejemplos no supera a los LLM zero-shot (27 %); en la mezcla natural
   NB llega a 41.9 % contra 28 % de "responder siempre Technical Support".
 - 36 asuntos **idénticos** aparecen con colas distintas: ruido de etiqueta directo del generador sintético.
@@ -91,6 +97,9 @@ Conclusión: **el cuello de botella son las etiquetas, no el modelo.**
 - T tocó el tope de la grilla (20) en todas: señal de "no hay señal" (la T óptima tiende a infinito).
 - **Lo valioso**: con umbral derivado del error, Jev automatiza ~0 % → manda todo a humano en vez de rutear
   mal en silencio. Un LLM generativo habría ruteado solo y fallado ~73 % sin avisar.
+
+**Qué cambió en el proyecto por esto:** (1) se buscó Bitext, con etiquetas limpias; (2) las descripciones por clase
+no se dan por buenas sin medirlas en cada dataset; (3) T=20 (tope de la grilla) se trata como alarma de "no hay señal".
 
 Para demostrar valor hacen falta etiquetas consistentes: tickets reales de la empresa (ruteo histórico
 auditado) o un dataset con etiquetas humanas. Scripts: `jev/eval_kaggle.py`, `jev/diagnostico_kaggle.py`.

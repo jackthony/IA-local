@@ -25,10 +25,17 @@ jobs:
       - name: Tests deterministas (sin LLM)
         run: |
           for t in scripts/test_escanear_secretos.py scripts/test_repo.py scripts/test_inventario.py labs/test_divisas.py labs/test_orquestacion.py \
-                   labs/test_mcp.py labs/test_router.py labs/test_hitl.py \
+                   labs/test_mcp.py labs/test_router.py labs/test_hitl.py evals/test_evals.py \
                    jev/test_jev.py jev/test_datos.py jev/test_empresa.py servicios/test_servicios.py; do
             echo "== $t"
             uv run python "$t"
           done
+      - name: Puerta de evaluación (golden set, sin LLM)
+        # Falla si algún umbral de evals/umbrales.json se pasa. El reporte JSON queda en evals/reportes/ y se vuelca al log.
+        run: |
+          status=0
+          uv run python evals/evaluar.py || status=$?
+          for r in evals/reportes/*.json; do cat "$r"; done
+          exit $status
       - name: Auditoría de dependencias contra OSV
         run: uv run python jev/auditar_deps.py

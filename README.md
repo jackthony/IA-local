@@ -1,7 +1,7 @@
 # IA-local — Lab de agentes, A2A y orquestación con modelos locales
 
 📐 **Empieza por [ARQUITECTURA.md](ARQUITECTURA.md)** (mapa, credenciales, orden de carpetas y siguiente
-nivel en Mac) · 📋 [INVENTARIO.md](INVENTARIO.md) (se regenera por máquina) · 🧠 [modelos.json](modelos.json)
+nivel en Mac) · 📋 [INVENTARIO.md](INVENTARIO.md) (se regenera por máquina) · 🧭 [DECISIONES.md](DECISIONES.md) (el porqué de cada decisión) · 🧠 [modelos.json](modelos.json)
 (modelos por digest) · 🧪 [experimentos/](experimentos/) (cómo se descubrió cada decisión)
 
 Stack: **Ollama** (CPU) + **Microsoft Agent Framework** (Python) + **A2A SDK**.
@@ -28,9 +28,23 @@ uv run python jev/test_jev.py
 uv run python scripts/inventario.py
 ```
 
-Datos: el repo NO trae datasets (licencias y peso). Se descargan verificados por SHA-256:
-`uv run python jev/ingesta.py bitext` (y `tickets`). La calibración `data/calibracion-bitext-demo.json`
-sí viene versionada (sin PII), así que los labs 10 y 11 funcionan tras clonar.
+Datos: el repo **sí trae** los dos datasets en `data/` (~38 MB, versionados, cada uno con su manifiesto SHA-256
+y su licencia en [data/LICENCIAS.md](data/LICENCIAS.md)), más la calibración `data/calibracion-bitext-demo.json`
+(sin PII). Los labs 10 y 11 funcionan tras clonar, sin descargar nada. `uv run python jev/ingesta.py bitext`
+(y `tickets`) descarga de nuevo desde la fuente fijada a commit y verifica el SHA-256: sirve para regenerarlos o
+auditarlos, no es un paso obligatorio. El dataset de tickets es CC BY-NC 4.0 (solo no comercial); Bitext es CDLA-Sharing-1.0.
+
+## Evaluación continua (golden set)
+
+`evals/` mide el router Jev (lab 10) y la política de reembolso (lab 11) contra 77 casos versionados
+(`evals/golden/golden-v1.jsonl`): exactitud por clase, ECE, % automatizado y casos críticos mal enviados a
+automático. `evals/umbrales.json` fija los límites; CI falla si se pasa alguno y deja un reporte JSON por corrida
+en `evals/reportes/`. Perfiles de modelo (Ollama / Azure OpenAI) y comparación: [evals/README.md](evals/README.md).
+
+```bash
+uv run python evals/evaluar.py             # repite predicciones grabadas, sin LLM (lo que corre CI)
+uv run python evals/evaluar.py --grabar    # mide en vivo con el modelo de LLM_BASE_URL / LLM_MODEL
+```
 
 ## Producción local con Docker (MacBook)
 
