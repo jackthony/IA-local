@@ -1,7 +1,7 @@
 {
   "account-01": {
     "destino": "humano",
-    "impacto": "Conservador: caso crítico claro ('olvidé mi contraseña') con confianza bajo el umbral 0.83 va a una persona. Cuesta atención humana, no riesgo."
+    "impacto": "Conservador: caso crítico claro ('olvidé mi contraseña') con confianza bajo el umbral 0.88 va a una persona. Cuesta atención humana, no riesgo."
   },
   "order-04": {
     "destino": "humano",
@@ -13,14 +13,46 @@
   },
   "cancel-01": {
     "destino": "humano",
-    "impacto": "Conservador: confianza bajo el umbral 0.83. Cuesta atención humana, no riesgo."
+    "impacto": "Conservador: confianza bajo el umbral 0.88. Cuesta atención humana, no riesgo."
   },
   "cancel-03": {
     "destino": "humano",
-    "impacto": "Conservador: confianza bajo el umbral 0.83. Cuesta atención humana, no riesgo."
+    "impacto": "Conservador: confianza bajo el umbral 0.88. Cuesta atención humana, no riesgo."
   },
   "otro-08": {
     "destino": "atencion",
-    "impacto": "Opinión sobre fútbol sale a atención con confianza 0.97: el 4B lo toma por FEEDBACK ('opinas'). Inocuo, pero es la única fuga fuera de dominio que queda; OTRO acierta 9 de 12 y los otros 2 errores igual llegan a humano por confianza baja."
+    "impacto": "Opinión sobre fútbol sale a atención con confianza 0.88: el 4B lo toma por FEEDBACK ('opinas'). Inocuo, pero es una fuga fuera de dominio; con tickets de TI ajenos (300) las fugas bajaron de 45 a 20 al recalibrar, pero no llegan a cero (DECISIONES §12)."
+  },
+  "account-03": {
+    "destino": "humano",
+    "impacto": "Conservador: confianza bajo el umbral 0.88 (recalibración con más OTRO, DECISIONES §12). Cuesta atención humana, no riesgo."
+  },
+  "shipping-04": {
+    "destino": "humano",
+    "impacto": "Conservador: confianza bajo el umbral 0.88 (recalibración con más OTRO, DECISIONES §12). Cuesta atención humana, no riesgo."
+  },
+  "subscription-05": {
+    "destino": "humano",
+    "impacto": "Conservador: confianza bajo el umbral 0.88 (recalibración con más OTRO, DECISIONES §12). Cuesta atención humana, no riesgo."
+  },
+  "cancel-02": {
+    "destino": "humano",
+    "impacto": "Conservador: confianza bajo el umbral 0.88 (recalibración con más OTRO, DECISIONES §12). Cuesta atención humana, no riesgo."
+  },
+  "cancel-04": {
+    "destino": "humano",
+    "impacto": "Conservador: confianza bajo el umbral 0.88 (recalibración con más OTRO, DECISIONES §12). Cuesta atención humana, no riesgo."
+  },
+  "cancel-05": {
+    "destino": "humano",
+    "impacto": "Conservador: confianza bajo el umbral 0.88 (recalibración con más OTRO, DECISIONES §12). Cuesta atención humana, no riesgo."
+  },
+  "payment-03": {
+    "destino": "humano",
+    "impacto": "Conservador: cobro doble (caso crítico) con confianza bajo el umbral 0.88 va a una persona, que es el destino seguro. Cuesta atención humana, no riesgo."
+  },
+  "ambiguo-02": {
+    "destino": "atencion",
+    "impacto": "Regresión de la recalibración: 'hello' sale a atención como CONTACT con 0.914 (antes iba a humano). Inocuo (un saludo en la cola de atención), pero es una fuga fuera de dominio; la cascada no la ve porque la confianza es alta (DECISIONES §12)."
   }
 }

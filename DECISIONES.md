@@ -201,3 +201,36 @@ Formato: contexto → decisión → por qué → qué cuesta → cómo se verifi
 - **Escenarios de producción contra un servidor falso compatible con OpenAI** (`evals/llm_falso.py`): el recorrido
   completo (HTTP, auth, PII, cliente de Jev, ruteo, workflow, checkpoints, ledger) corre en CI sin LLM. Cada prueba de
   seguridad se validó rompiendo el código a propósito (mutación) para comprobar que falla.
+
+## 12. Segunda validación fuera de dominio y recalibración de OTRO
+
+- **Contexto.** Se midió el router con 300 tickets de mesa de ayuda de TI (Tobi-Bueck/customer-support-tickets en Hugging Face,
+  cc-by-nc-4.0: se usó solo localmente en `evals/golden/privado/`, ignorado por git, y no se redistribuye). Todos son ajenos a
+  nuestro catálogo y deben ir a humano. Con la calibración de §8, 45 de 300 (15 %) salían a un especialista, casi todos como
+  `FEEDBACK` con confianza 0.85-1.0. TypeSafe solo dejaba pasar 7, y la cascada (§9) no ayudaba: solo consulta cuando Ollama duda.
+- **Decisión.** Ampliar OTRO con 40 mensajes propios de TI, RR. HH., ventas, producto e incidentes (`data/ood-otro-v2.csv`, escritos
+  a mano: no se copió nada de los 300) y recalibrar: T 6.0 → 6.5, umbral al 5 % de error 0.83 → 0.88. Se regeneró el hold-out
+  (`generar_holdout.py` ya leía el CSV extra desde la calibración) y se regrabaron Ollama y TypeSafe en golden-v3 y hold-out.
+- **Resultado en los 300 tickets (no usados para calibrar).** Destino correcto 85.0 % → 93.3 %; fugas 45 → 20; ECE 0.228 → 0.103.
+- **Costo.** Se automatiza menos: golden-v3 67.5 % → 59.7 % y hold-out 80.8 % → 69.2 % (el hold-out cambió de filas OTRO, no es
+  comparación exacta). Exactitud en golden-v3 95.7 % → 92.8 %. `umbrales.json` baja `min_pct_automatizado` a 0.55 y
+  `min_exactitud_clase` a 0.55 solo por OTRO (7 de 12), con la razón en `_nota`. Pasan 6 → 14 limitaciones conocidas en
+  `limitaciones-v3-ollama.json`: 12 son envíos a humano por confianza baja (cuestan atención, no riesgo); quedan 2 fugas fuera de
+  dominio a atención, `otro-08` y una regresión: `hello` sale a atención como CONTACT con 0.914 (antes iba a humano).
+- **Hold-out regenerado (240 casos).**
+
+  | | Ollama | TypeSafe | Cascada |
+  |---|---|---|---|
+  | Exactitud | 91.7 % | 92.9 % | 95.0 % |
+  | ECE | 0.029 | 0.035 | 0.021 |
+  | % automatizado | 69.2 % | 79.2 % | 84.6 % |
+  | Destino correcto | 77.5 % | 87.1 % | 92.5 % |
+  | Consultas al remoto | 0 | 100 % | 27.5 % |
+
+  Con la recalibración Ollama duda más, así que la cascada consulta más (15 % → 27.5 %) y gana más: el mismo gasto relativo, mayor
+  beneficio. La tabla de §10 queda como la medición previa a este cambio.
+- **Lo que no se resolvió.** Una fuga con confianza alta (`hello`, fútbol) no la ve la cascada. Opción pendiente: consultar al
+  segundo juez también cuando Ollama elige `FEEDBACK`/`CONTACT` con confianza alta, a costa de más consultas.
+- **Límite de la evidencia.** Datos de TI sintéticos en inglés: miden fuera de dominio, no la precisión de nuestras 11 clases con
+  clientes reales (sigue pendiente, `evals/csv_a_golden.py`). Las grabaciones privadas de TypeSafe sobre esos 300 quedaron
+  desactualizadas tras recalibrar y no se regrabaron.

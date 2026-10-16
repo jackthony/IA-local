@@ -1,0 +1,162 @@
+instruction,category,intent
+hi there,OTRO,saludo
+good morning,OTRO,saludo
+"Hola, buenas tardes",OTRO,saludo
+hey,OTRO,saludo
+"hello, anyone there?",OTRO,saludo
+Buenas,OTRO,saludo
+good evening everyone,OTRO,saludo
+"hi, how are you today?",OTRO,saludo
+¿Hola? ¿hay alguien?,OTRO,saludo
+hey you,OTRO,saludo
+greetings,OTRO,saludo
+Buen día,OTRO,saludo
+yo,OTRO,saludo
+hello hello,OTRO,saludo
+Hola qué tal,OTRO,saludo
+hi!!,OTRO,saludo
+good afternoon,OTRO,saludo
+Saludos cordiales,OTRO,saludo
+hola hola,OTRO,saludo
+morning,OTRO,saludo
+how's your day going?,OTRO,charla
+Do you like music?,OTRO,charla
+tell me a joke,OTRO,charla
+What is your name?,OTRO,charla
+are you a robot or a person?,OTRO,charla
+¿Cuál es tu color favorito?,OTRO,charla
+Cuéntame un chiste,OTRO,charla
+"you seem smart, what do you think about life?",OTRO,charla
+I'm bored,OTRO,charla
+what do you do for fun?,OTRO,charla
+¿Eres un bot?,OTRO,charla
+thanks for nothing lol,OTRO,charla
+just testing this chat,OTRO,charla
+test test 123,OTRO,charla
+¿Me puedes hablar de ti?,OTRO,charla
+do you dream?,OTRO,charla
+what's up,OTRO,charla
+¿Cómo te llamas?,OTRO,charla
+can we just chat for a bit?,OTRO,charla
+lol ok,OTRO,charla
+What is the capital of France?,OTRO,fuera_de_tema
+Who won the world cup in 2010?,OTRO,fuera_de_tema
+How do I bake a chocolate cake?,OTRO,fuera_de_tema
+What time is it in Tokyo?,OTRO,fuera_de_tema
+Recomiéndame una película,OTRO,fuera_de_tema
+¿Cuál es la receta del ceviche?,OTRO,fuera_de_tema
+Explain quantum physics in simple words,OTRO,fuera_de_tema
+Is it going to rain tomorrow in Cusco?,OTRO,fuera_de_tema
+How tall is Mount Everest?,OTRO,fuera_de_tema
+What's the best programming language to learn?,OTRO,fuera_de_tema
+¿Quién fue el primer presidente del Perú?,OTRO,fuera_de_tema
+translate 'good night' to French,OTRO,fuera_de_tema
+How many calories are in an apple?,OTRO,fuera_de_tema
+¿Cuánto es 15 por 12?,OTRO,fuera_de_tema
+Where can I buy a used car?,OTRO,fuera_de_tema
+What is the meaning of life?,OTRO,fuera_de_tema
+Suggest a name for my dog,OTRO,fuera_de_tema
+¿Cómo se juega al ajedrez?,OTRO,fuera_de_tema
+how do vaccines work,OTRO,fuera_de_tema
+Which planet is the biggest?,OTRO,fuera_de_tema
+asdfgh,OTRO,ininteligible
+???,OTRO,ininteligible
+...,OTRO,ininteligible
+jkl;jkl;,OTRO,ininteligible
+qqqqqq,OTRO,ininteligible
+xzxzxz,OTRO,ininteligible
+ñññ,OTRO,ininteligible
+1234567890,OTRO,ininteligible
+!!!!!,OTRO,ininteligible
+aaaa bbbb cccc,OTRO,ininteligible
+hmm,OTRO,ininteligible
+zzz,OTRO,ininteligible
+lorem ipsum dolor sit amet,OTRO,ininteligible
+@@@###,OTRO,ininteligible
+kkkkkk,OTRO,ininteligible
+blah blah blah,OTRO,ininteligible
+ok,OTRO,ininteligible
+e,OTRO,ininteligible
+no sé,OTRO,ininteligible
+.,OTRO,ininteligible
+I have a problem,OTRO,consulta_vaga
+Necesito ayuda,OTRO,consulta_vaga
+help,OTRO,consulta_vaga
+can you help me with something?,OTRO,consulta_vaga
+tengo una duda,OTRO,consulta_vaga
+I need to ask something,OTRO,consulta_vaga
+¿Me pueden ayudar?,OTRO,consulta_vaga
+something is wrong,OTRO,consulta_vaga
+quiero preguntar algo,OTRO,consulta_vaga
+it doesn't work,OTRO,consulta_vaga
+"urgent, please answer",OTRO,consulta_vaga
+I have a question but I don't know how to say it,OTRO,consulta_vaga
+no entiendo nada,OTRO,consulta_vaga
+please advise,OTRO,consulta_vaga
+"Hay un problema, por favor ayúdenme",OTRO,consulta_vaga
+can someone call me?,OTRO,consulta_vaga
+is this the right place to ask?,OTRO,consulta_vaga
+me pueden orientar,OTRO,consulta_vaga
+I'd like some information,OTRO,consulta_vaga
+necesito información,OTRO,consulta_vaga
+Write me a poem about the sea,OTRO,solicitud_ajena
+Escribe un correo de renuncia para mi trabajo,OTRO,solicitud_ajena
+Can you do my homework on fractions?,OTRO,solicitud_ajena
+Write a Python script to sort a list,OTRO,solicitud_ajena
+Hazme un resumen de la Segunda Guerra Mundial,OTRO,solicitud_ajena
+Give me a workout plan for the week,OTRO,solicitud_ajena
+I want to apply for a job at your company,OTRO,solicitud_ajena
+"Busco trabajo, ¿tienen vacantes?",OTRO,solicitud_ajena
+Do you sell advertising space on your site?,OTRO,solicitud_ajena
+Quiero hacer una alianza comercial con ustedes,OTRO,solicitud_ajena
+Can you recommend a good restaurant in Lima?,OTRO,solicitud_ajena
+Draft a birthday message for my mom,OTRO,solicitud_ajena
+Necesito un abogado para mi divorcio,OTRO,solicitud_ajena
+Help me write my CV,OTRO,solicitud_ajena
+Compose a tweet about coffee,OTRO,solicitud_ajena
+¿Pueden patrocinar mi evento deportivo?,OTRO,solicitud_ajena
+"I'm a journalist, who can I interview?",OTRO,solicitud_ajena
+Plan a trip to Machu Picchu for me,OTRO,solicitud_ajena
+I'd like to sell you my software,OTRO,solicitud_ajena
+Can you tutor me in English?,OTRO,solicitud_ajena
+The app keeps crashing every time I open the dashboard,OTRO,tecnico_ti
+Our VPN disconnects every ten minutes and nobody can work,OTRO,tecnico_ti
+I can't log into the company wifi on my new laptop,OTRO,tecnico_ti
+The database server is running out of disk space,OTRO,tecnico_ti
+This is unacceptable: the API returns a 500 error on every request,OTRO,tecnico_ti
+My printer is offline again and the driver won't install,OTRO,tecnico_ti
+Please reset the SSH keys for the deploy user,OTRO,tecnico_ti
+The CI pipeline has been failing since yesterday's merge,OTRO,tecnico_ti
+Outlook is not syncing my calendar with my phone,OTRO,tecnico_ti
+We need two more laptops for the new engineers,OTRO,tecnico_ti
+The software update broke the plugin we rely on and I am very frustrated,OTRO,tecnico_ti
+Memory usage on the analytics cluster spikes after midnight,OTRO,tecnico_ti
+I was locked out of my corporate email after the password policy change,OTRO,tecnico_ti
+The website is down for everyone in the Lima office,OTRO,tecnico_ti
+Terrible service: the server has been unreachable for three hours,OTRO,tecnico_ti
+How do I configure two-factor authentication on the internal wiki?,OTRO,tecnico_ti
+The scheduled backup failed with a permissions error,OTRO,tecnico_ti
+My screen flickers and the laptop shuts down without warning,OTRO,tecnico_ti
+Can you install Docker on my workstation?,OTRO,tecnico_ti
+Slow response times on the reporting tool are driving us crazy,OTRO,tecnico_ti
+"There is a scheduled maintenance window on Saturday, will the service be down?",OTRO,tecnico_ti
+I would like to request vacation days for the first week of December,OTRO,rrhh
+How many sick days do I have left this year?,OTRO,rrhh
+I need a copy of my employment certificate for a bank loan,OTRO,rrhh
+When is the next payroll date and where can I see my payslip?,OTRO,rrhh
+I want to report a conflict with my team lead,OTRO,rrhh
+Do you have any open positions for backend developers?,OTRO,rrhh
+Could you send me a quote for 50 licenses of your platform?,OTRO,ventas
+We are evaluating vendors and would like a demo next week,OTRO,ventas
+What discounts do you offer for annual enterprise contracts?,OTRO,ventas
+Is there a partner program for consulting companies?,OTRO,ventas
+Does your product integrate with Salesforce and SAP?,OTRO,ventas
+I need a technical specification sheet for the 4K monitor,OTRO,producto
+"The firmware on my router is outdated, how do I upgrade it?",OTRO,producto
+The device won't turn on even after charging overnight,OTRO,producto
+Which model of the camera supports night vision?,OTRO,producto
+The installation guide for the water heater is missing a step,OTRO,producto
+Error code E45 appears on the display of my washing machine,OTRO,producto
+Our whole building lost power and the equipment is offline,OTRO,incidente
+There was a network outage in the data center this morning,OTRO,incidente
+"The status page says degraded performance, is this being fixed?",OTRO,incidente
