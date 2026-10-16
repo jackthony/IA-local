@@ -50,6 +50,18 @@ Se usan sus `probabilities`, no su `confidence`: esa es `(p_max - 1/n)/(1 - 1/n)
 probabilidad de acierto. El umbral de ruteo de la calibración local (0.7033) se aplica **sin recalibrar**, así que ECE y
 % automatizado de este perfil son indicativos; recalibra con datos propios antes de decidir con ellos.
 
+**Con tickets reales** (`csv_a_golden.py`): convierte un CSV de tickets en un golden privado (`evals/golden/privado/`, ignorado por
+git), anonimizando la PII antes de escribir nada, sin adivinar áreas (toda área debe estar en el catálogo o en `--mapa`), con
+los mensajes de prompt injection como casos críticos a humano y mínimo 50 casos únicos. Luego se mide igual que el resto:
+
+```bash
+uv run python evals/csv_a_golden.py tickets.csv --texto texto --area area --mapa mapa.json   # mapa: {"Facturación": "INVOICE", ...}
+G=evals/golden/privado/golden-mis-tickets.jsonl
+uv run python evals/evaluar.py --golden $G --grabar                      # Ollama, local
+uv run python evals/evaluar.py --golden $G --perfil typesafe --grabar    # solo si autorizas enviar texto anonimizado a un tercero
+uv run python evals/evaluar.py --golden $G --cascada
+```
+
 **Cascada** (`--cascada`): combina las predicciones grabadas de `ollama` y `typesafe` como lo hace `router_api` con
 `JEV_SEGUNDO=typesafe` (el remoto solo decide lo que el local dejaría en "confianza baja") y reporta cuánto se consulta, la
 exactitud, la automatización y el costo estimado. Define `PRECIO_ENTRADA_USD_1M` y `PRECIO_SALIDA_USD_1M` para el costo.

@@ -23,3 +23,6 @@ data/**
 !data/MANIFEST-*.json
 
 evals/reportes/
+
+# Golden de tickets reales (anonimizado, pero de clientes): nunca a git
+evals/golden/privado/
