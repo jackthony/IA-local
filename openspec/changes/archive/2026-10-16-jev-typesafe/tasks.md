@@ -7,4 +7,4 @@
 
 ## 3. Verificación
 - [x] 3.1 Suite determinista + puerta de evals sin cambios para Ollama
-- [ ] 3.2 Grabación contra el servicio real (la corre el usuario con su clave)
+- [x] 3.2 Grabación contra el servicio real (la corrió el usuario con su clave): 100 %, ECE 0.002, 85.5 % automatizado

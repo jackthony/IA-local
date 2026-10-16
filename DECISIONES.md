@@ -109,6 +109,14 @@ Formato: contexto → decisión → por qué → qué cuesta → cómo se verifi
 - **Controles.** La clave solo por env (nunca en errores, bitácoras ni predicciones); errores sin cuerpo (un servicio
   puede repetir el estado enviado); reintento con backoff solo en 429/529; la respuesta se valida (opciones ajenas o
   masa ≠ 1 son error); PII anonimizada antes de salir; topes de llamadas/tokens/USD con corte previo (`Presupuesto`).
+- **Resultado (golden-v2, 69 casos, 2026-10-16).** Exactitud 100 %, ECE 0.002, 85.5 % automatizado, 0 críticos a
+  automático, destino 95.7 %, latencia mediana 342 ms (p95 445), 544 tokens de entrada y 111 de salida por decisión. Con el
+  precio público de lista (entrada USD 0.042 por millón, salida gratis; verifica tu plan) son ~USD 0.023 por cada 1,000
+  decisiones. Frente a Ollama (100 %, 82.6 %, 69 ms, costo 0): igual de exacto, 5× más lento y con costo, a cambio de
+  probabilidades calibradas por el proveedor. Las 3 divergencias de destino son las mismas fuera de dominio de Ollama
+  (`limitaciones-v2-typesafe.json`): no dependen del modelo sino de que el catálogo no tiene una opción "otro".
+- **Lectura honesta.** Sobre 69 casos escritos por nosotros, la diferencia de 3 puntos de automatización no es
+  concluyente; no hay evidencia aquí de que el servicio supere al modelo local, solo de que lo iguala con más latencia.
 - **Verificación.** `evals/test_typesafe.py` contra un servicio falso, incluida la grabación completa.
 
 ## 8. Decisiones menores relacionadas
