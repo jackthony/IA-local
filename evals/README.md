@@ -33,7 +33,7 @@ uv run python evals/evaluar.py --perfil ollama --grabar
 cp perfiles/deepseek.env.example ~/mi-deepseek.env   # fuera del repo; rellena clave y precios
 set -a; source ~/mi-deepseek.env; set +a
 uv run python evals/evaluar.py --perfil deepseek --grabar
-uv run python evals/evaluar.py --comparar        # escribe evals/COMPARACION.md
+uv run python evals/evaluar.py --comparar        # escribe evals/reportes/COMPARACION.md (no versionado)
 ```
 
 **Jev alojado de TypeSafe** (`--perfil typesafe`): no es OpenAI-compatible, usa `POST /v1/systemone` (`jev/typesafe.py`, solo

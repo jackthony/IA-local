@@ -462,7 +462,8 @@ def main() -> int:
             md += (f"\n\n`no ejecutado`: sin predicciones grabadas para {', '.join(faltan)}. Carga el perfil "
                    "(perfiles/*.env.example) y corre `evals/evaluar.py --perfil <perfil> --grabar`.")
         print(md)
-        (a.golden.parent.parent / "COMPARACION.md").write_text(
+        REPORTES.mkdir(parents=True, exist_ok=True)  # generado y no versionado: las cifras de referencia viven en DECISIONES.md
+        (REPORTES / "COMPARACION.md").write_text(
             "# Comparación por perfil (generado por `evals/evaluar.py --comparar`)\n\n"
             f"Golden `{a.golden.name}` sha256 `{golden_sha[:12]}`, {len(casos)} casos.\n\n{md}\n", encoding="utf-8")
         return 0
