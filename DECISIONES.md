@@ -169,7 +169,25 @@ Formato: contexto → decisión → por qué → qué cuesta → cómo se verifi
   que sale a atención (`OTRO→CONTACT`: "necesito ayuda"-tipo) y 1 especialista equivocado. OTRO acierta 14/20.
 - **Lectura.** El umbral derivado del error tolerado generaliza; la exactitud bruta cae unos 5 puntos fuera del golden propio.
   Las etiquetas de Bitext son sintéticas (no tráfico real), así que sigue sin sustituir a tickets reales anonimizados.
-- **Pendiente.** Medir TypeSafe y la cascada sobre este hold-out (la corrida con clave la hace el usuario; ~250 llamadas).
+- **TypeSafe y cascada sobre el mismo hold-out** (predicciones de TypeSafe: 241 llamadas, 139,289 + 28,780 tokens; precio de
+  lista entrada USD 0.042/M, salida gratis):
+
+  | | Ollama | TypeSafe | Cascada |
+  |---|---|---|---|
+  | Exactitud | 90.8 % | 93.8 % | 94.2 % |
+  | ECE | 0.025 | 0.040 | 0.019 |
+  | % automatizado (exactitud dentro) | 80.8 % (95.9 %) | 79.6 % (96.9 %) | 86.7 % |
+  | Destino correcto | 86.2 % | 87.1 % | 91.7 % |
+  | Latencia mediana / p95 | 70 / 72 ms | 356 / 431 ms | 70 / 429 ms |
+  | Consultas al servicio de pago | 0 | 100 % | 15 % |
+  | Costo por 1,000 decisiones | 0 | ~USD 0.024 | ~USD 0.0036 |
+
+  La cascada es la mejor de las tres sobre datos independientes, y lo que gana frente a TypeSafe solo es costo y latencia.
+  Ambos modelos flojean en `DELIVERY` (0.65-0.75): se confunde con `SHIPPING` y `ORDER`, cuyas etiquetas de Bitext
+  se solapan. TypeSafe no es determinista entre corridas (dos corridas: 92.9 % y 93.8 %, ECE 0.037 y 0.040), así que
+  diferencias de ~1 punto no cuentan. Se guardó la segunda corrida; la primera costó ~USD 0.008 y se descartó.
+- **Límite.** Etiquetas sintéticas de Bitext, no tráfico real; la decisión de activar `JEV_SEGUNDO` sigue siendo del
+  usuario y conviene validarla con una muestra de tickets reales anonimizados.
 
 ## 11. Decisiones menores relacionadas
 
