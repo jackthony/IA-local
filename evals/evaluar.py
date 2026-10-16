@@ -139,9 +139,11 @@ def dist_de(p: dict, tipo: Choice, cal: dict) -> dict[str, float]:
     return distribucion([(t, lp) for t, lp in p["logprobs"]], etiquetas(tipo), cal["T"])
 
 
-def fusionar_cascada(casos: list[dict], local: dict[str, dict], remoto: dict[str, dict], cal: dict) -> tuple[dict[str, dict], int]:
-    """Predicciones de la cascada: decide el modelo local y solo si su ruteo sería 'confianza baja' (nunca inyección ni
-    riesgo legal, que ya van a humano y no deben salir) se usa la predicción del juez remoto. Devuelve (preds, consultas).
+def fusionar_cascada(casos: list[dict], local: dict[str, dict], remoto: dict[str, dict], cal: dict,
+                     ampliada: bool = True) -> tuple[dict[str, dict], int]:
+    """Predicciones de la cascada: decide el modelo local y solo si su ruteo sería 'confianza baja' o, con `ampliada`, un envío
+    automático a una clase dudosa (r10.pide_segundo_juez; nunca inyección ni riesgo legal, que ya van a humano y no deben salir)
+    se usa la predicción del juez remoto. Devuelve (preds, consultas).
 
     ms suma ambas latencias; tokens cuentan solo lo consultado, así que el promedio por decisión es el costo real.
     """
@@ -152,7 +154,7 @@ def fusionar_cascada(casos: list[dict], local: dict[str, dict], remoto: dict[str
         d = decidir(tipo, dist_de(p, tipo, cal))
         _, motivo = r10.decidir_ruta(d.valor, d.confianza, umbral, r10.ESPECIALISTAS, r10.es_sospechoso(c["mensaje"]),
                                      r10.es_riesgoso(c["mensaje"]))
-        if motivo == "confianza baja" and c["id"] in remoto:
+        if r10.pide_segundo_juez(d.valor, motivo, ampliada) and c["id"] in remoto:
             r = remoto[c["id"]]
             fusion[c["id"]] = {**r, "ms": p["ms"] + r["ms"]}
             consultas += 1
@@ -442,17 +444,18 @@ def main() -> int:
     if a.cascada:
         _, local = cargar_predicciones(ruta_predicciones("ollama", a.golden))
         meta_r, remoto = cargar_predicciones(ruta_predicciones("typesafe", a.golden))
-        fusion, consultas = fusionar_cascada(casos, local, remoto, cal)
-        m = evaluar(casos, fusion, cal, meta_r, precios)
-        n = m["n"]["ruteo"]
-        print(f"cascada ollama -> typesafe: consulta al remoto en {consultas}/{n} decisiones ({consultas / n:.1%})")
-        print(f"exactitud {m['exactitud_global']:.1%} | ECE {m['ece']:.3f} | automatizado {m['pct_automatizado']:.1%} | "
-              f"críticos a automático {len(m['criticos']['mal_a_automatico'])} | destino {m['exactitud_destino']:.1%} | "
-              f"latencia mediana/p95 {m['latencia_ms']['mediana']}/{m['latencia_ms']['p95']} ms | "
-              f"tokens remotos por decisión {m['tokens_por_decision']['entrada']:.0f}/{m['tokens_por_decision']['salida']:.0f} | "
-              f"costo por 1,000: {m['costo_por_1000_usd']}")
-        for x in m["divergencias_destino"]:
-            print(f"  divergencia {x['id']}: esperado {x['esperado']}, real {x['destino']} [{x['motivo']}]")
+        for nombre, ampliada in (("solo confianza baja", False), ("ampliada (+FEEDBACK/CONTACT)", True)):
+            fusion, consultas = fusionar_cascada(casos, local, remoto, cal, ampliada)
+            m = evaluar(casos, fusion, cal, meta_r, precios)
+            n = m["n"]["ruteo"]
+            print(f"cascada ollama -> typesafe, {nombre}: consulta al remoto en {consultas}/{n} decisiones ({consultas / n:.1%})")
+            print(f"exactitud {m['exactitud_global']:.1%} | ECE {m['ece']:.3f} | automatizado {m['pct_automatizado']:.1%} | "
+                  f"críticos a automático {len(m['criticos']['mal_a_automatico'])} | destino {m['exactitud_destino']:.1%} | "
+                  f"latencia mediana/p95 {m['latencia_ms']['mediana']}/{m['latencia_ms']['p95']} ms | "
+                  f"tokens remotos por decisión {m['tokens_por_decision']['entrada']:.0f}/{m['tokens_por_decision']['salida']:.0f} | "
+                  f"costo por 1,000: {m['costo_por_1000_usd']}")
+            for x in m["divergencias_destino"]:
+                print(f"  divergencia {x['id']}: esperado {x['esperado']}, real {x['destino']} [{x['motivo']}]")
         return 0
     if a.comparar:
         res = {p: calcular_perfil(p, casos, golden_sha, cal, a.golden, precios) for p in PERFILES}

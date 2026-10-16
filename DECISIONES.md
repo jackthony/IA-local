@@ -234,3 +234,27 @@ Formato: contexto → decisión → por qué → qué cuesta → cómo se verifi
 - **Límite de la evidencia.** Datos de TI sintéticos en inglés: miden fuera de dominio, no la precisión de nuestras 11 clases con
   clientes reales (sigue pendiente, `evals/csv_a_golden.py`). Las grabaciones privadas de TypeSafe sobre esos 300 quedaron
   desactualizadas tras recalibrar y no se regrabaron.
+
+## 13. Cascada ampliada: también se consulta al segundo juez ante FEEDBACK/CONTACT con confianza alta
+
+- **Contexto.** §12 dejó fugas fuera de dominio que la cascada no ve: el 4B las clasifica como FEEDBACK o CONTACT con 0.85-1.0
+  y el umbral no las frena (`hello`, fútbol, quejas técnicas).
+- **Decisión.** `r10.pide_segundo_juez`: consulta por confianza baja y, además, cuando el local enviaría a una clase dudosa
+  (`CLASES_DUDOSAS = {FEEDBACK, CONTACT}`). Inyección y riesgo legal siguen sin salir. `JEV_SEGUNDO_AMPLIADO=0` la apaga.
+  `evaluar.py --cascada` reporta las dos variantes con las mismas grabaciones.
+- **Resultado.**
+
+  | Destino correcto / consultas | Solo confianza baja | Ampliada |
+  |---|---|---|
+  | 300 tickets ajenos de TI | 92.7 % / 64.7 % | **99.3 %** / 71.3 % (fugas 20 → 2) |
+  | golden-v3 (77) | 97.4 % / 20.8 % | **100 %** / 36.4 % (`hello` y fútbol atrapados) |
+  | hold-out (240) | 92.5 % / 27.5 % | 91.2 % / 42.5 % |
+
+  Tokens de entrada remotos por decisión en el hold-out: 162 → 250. A USD 0.042/M (precio de lista, a verificar con el plan)
+  son unos USD 0.0068 → 0.0105 por 1,000 decisiones.
+- **Cuesta.** En tráfico del dominio propio no mejora (el hold-out baja 1.3 puntos: TypeSafe confunde DELIVERY con
+  SHIPPING/ORDER, y ahora opina sobre más casos) y consulta un 55 % más. Mejora mucho donde hay ruido ajeno. Se deja activada por
+  defecto porque el segundo juez ya es opt-in y el riesgo que cubre es el de mandar a un especialista un mensaje que no es suyo;
+  quien tenga tráfico limpio puede apagarla.
+- **Límite.** Mediciones sobre datos sintéticos; la proporción real de ruido ajeno depende del canal. Con tickets reales
+  (`evals/csv_a_golden.py`) se decide si compensa.

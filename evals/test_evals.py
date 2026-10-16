@@ -203,6 +203,16 @@ def test_golden_invalido() -> None:
                 assert texto in str(e), e
 
 
+def test_regla_del_segundo_juez() -> None:
+    """Confianza baja siempre consulta; la clase dudosa solo en la cascada ampliada; inyección y riesgo legal nunca."""
+    pide = ev.r10.pide_segundo_juez
+    assert pide("ORDER", "confianza baja") and pide("ORDER", "confianza baja", ampliada=False)
+    assert pide("FEEDBACK", "auto") and pide("CONTACT", "auto")
+    assert not pide("FEEDBACK", "auto", ampliada=False) and not pide("ORDER", "auto")
+    for motivo in ("posible prompt injection", "riesgo legal"):
+        assert not pide("FEEDBACK", motivo) and not pide("CONTACT", motivo), motivo
+
+
 def test_costo() -> None:
     assert ev.costo_1000(200, 1, {"local": True}, None) == 0.0
     assert ev.costo_1000(200, 1, {"local": False}, None) is None

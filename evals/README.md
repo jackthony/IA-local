@@ -63,7 +63,7 @@ uv run python evals/evaluar.py --golden $G --cascada
 ```
 
 **Cascada** (`--cascada`): combina las predicciones grabadas de `ollama` y `typesafe` como lo hace `router_api` con
-`JEV_SEGUNDO=typesafe` (el remoto solo decide lo que el local dejaría en "confianza baja") y reporta cuánto se consulta, la
+`JEV_SEGUNDO=typesafe` (el remoto decide lo que el local dejaría en "confianza baja" y, en la variante ampliada, los envíos automáticos a FEEDBACK/CONTACT, `JEV_SEGUNDO_AMPLIADO=0` la apaga) y reporta ambas variantes: cuánto se consulta, la
 exactitud, la automatización y el costo estimado. Define `PRECIO_ENTRADA_USD_1M` y `PRECIO_SALIDA_USD_1M` para el costo.
 
 **Control de gasto (solo nube).** `--grabar` cuenta llamadas y tokens, y corta *antes* de la llamada que pasaría un tope,

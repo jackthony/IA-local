@@ -228,6 +228,30 @@ def test_cascada_consulta_solo_cuando_el_local_duda() -> None:
 
 
 @solo_simulado
+def test_cascada_ampliada_atrapa_fuga_con_confianza_alta() -> None:
+    """'hello' sale del 4B como CONTACT con 0.914: el umbral lo deja pasar a atención; la clase dudosa lo manda al segundo juez."""
+    fuga, claro = caso("ambiguo-02"), caso("account-02")
+    assert (decidir(fuga["mensaje"]).json()["destino"]) == "atencion"  # sin cascada, la fuga existe
+    with con_segundo():
+        d = decidir(fuga["mensaje"]).json()
+        assert (d["juez"], d["categoria"], d["destino"], d["motivo"]) == ("typesafe", "OTRO", "humano", "sin especialista"), d
+        assert decidir(claro["mensaje"]).json()["juez"] == "local", "una clase no dudosa no debe consultar"
+        assert TypeSafeFalso.recibidas == [ev.anonimizar(fuga["mensaje"])]
+
+
+@solo_simulado
+def test_cascada_ampliada_se_puede_apagar() -> None:
+    fuga = caso("ambiguo-02")
+    with con_segundo():
+        router_api.AMPLIADA = False
+        try:
+            d = decidir(fuga["mensaje"]).json()
+        finally:
+            router_api.AMPLIADA = True
+        assert (d["juez"], d["destino"]) == ("local", "atencion") and TypeSafeFalso.recibidas == [], d
+
+
+@solo_simulado
 def test_cascada_nunca_envia_inyeccion_ni_riesgo_legal_ni_pii() -> None:
     with con_segundo():
         for c in (caso("inyeccion-01"), caso("ambiguo-06")):
@@ -270,6 +294,7 @@ def test_telemetria_sin_contenido() -> None:
 PRUEBAS = [test_golden_por_http, test_criticos_nunca_a_automatico, test_motivos_de_humano, test_pii_no_llega_al_modelo,
            test_sin_token_no_toca_el_modelo, test_modelo_caido_falla_cerrado, test_respuesta_vacia_del_modelo_falla_cerrado,
            test_modelo_lento_agota_el_tiempo, test_cascada_consulta_solo_cuando_el_local_duda,
+           test_cascada_ampliada_atrapa_fuga_con_confianza_alta, test_cascada_ampliada_se_puede_apagar,
            test_cascada_nunca_envia_inyeccion_ni_riesgo_legal_ni_pii, test_cascada_cupo_agotado_vuelve_al_local,
            test_cascada_juez_caido_queda_la_decision_local, test_telemetria_sin_contenido]
 

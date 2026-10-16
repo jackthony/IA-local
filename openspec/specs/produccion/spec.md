@@ -79,14 +79,18 @@ llegue al modelo ni a la respuesta, que una petición sin token no toque al mode
 - **THEN** al menos un escenario falla
 
 ### Requirement: Segundo juez opcional del router
-Con `JEV_SEGUNDO=typesafe`, `POST /v1/decidir` SHALL consultar al Jev alojado solo cuando el ruteo local sería "confianza baja",
-con el mensaje anonimizado y el mismo umbral, y SHALL NOT consultarlo para prompt injection ni riesgo legal. SHALL limitar las
+Con `JEV_SEGUNDO=typesafe`, `POST /v1/decidir` SHALL consultar al Jev alojado solo cuando el ruteo local sería "confianza baja" o, salvo `JEV_SEGUNDO_AMPLIADO=0`, un envío
+automático a FEEDBACK o CONTACT (las clases por donde se cuelan mensajes ajenos con confianza alta), con el mensaje anonimizado y el mismo umbral, y SHALL NOT consultarlo para prompt injection ni riesgo legal. SHALL limitar las
 consultas por proceso a `JEV_SEGUNDO_MAX` y, si el servicio falla o el cupo se agota, conservar la decisión local. La
 respuesta SHALL incluir `juez` (`local` o `typesafe`).
 
 #### Scenario: Duda del local
 - **WHEN** el modelo local da "confianza baja" y el segundo juez responde con confianza suficiente
 - **THEN** el destino sale del segundo juez y `juez` es `typesafe`
+
+#### Scenario: Fuga con confianza alta
+- **WHEN** el modelo local envía "hello" a atención como CONTACT con confianza sobre el umbral
+- **THEN** se consulta al segundo juez, que lo clasifica OTRO, y el destino es humano con `juez` `typesafe`
 
 #### Scenario: Cupo agotado
 - **WHEN** ya se usaron `JEV_SEGUNDO_MAX` consultas

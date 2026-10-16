@@ -53,6 +53,7 @@ class Cupo:
 # Nunca para inyección ni riesgo legal: esos mensajes ya van a humano y no deben salir de la máquina.
 SEGUNDO = TypeSafeJev(timeout=float(os.getenv("JEV_TIMEOUT_S", "10")), reintentos=1) if os.getenv("JEV_SEGUNDO") == "typesafe" else None
 CUPO = Cupo(int(os.getenv("JEV_SEGUNDO_MAX", "200")))
+AMPLIADA = os.getenv("JEV_SEGUNDO_AMPLIADO", "1") != "0"  # 0 = solo confianza baja (DECISIONES §12)
 
 
 class JevNoDisponible(Exception):
@@ -89,7 +90,7 @@ async def decidir(request: Request) -> JSONResponse:
         destino, motivo = r10.decidir_ruta(d.valor, d.confianza, CAL["umbrales"]["0.05"], r10.ESPECIALISTAS,
                                            sospechoso=r10.es_sospechoso(msg), riesgoso=r10.es_riesgoso(msg))
         juez = "local"
-        if motivo == "confianza baja" and SEGUNDO is not None and CUPO.tomar():
+        if SEGUNDO is not None and r10.pide_segundo_juez(d.valor, motivo, AMPLIADA) and CUPO.tomar():
             try:
                 d = await SEGUNDO.preguntar(anonimizar(msg), CAL["pregunta"], TIPO)
                 top2 = sorted(d.probs, key=d.probs.get, reverse=True)[:2]

@@ -70,6 +70,17 @@ def decidir_ruta(categoria: str, confianza: float, umbral: float, especialistas:
     return especialistas[categoria], "auto"
 
 
+# Clases por donde se cuelan mensajes ajenos al negocio con confianza alta (DECISIONES §12): el 4B toma un reclamo técnico o un
+# saludo por FEEDBACK/CONTACT con 0.85-1.0. El umbral no los ve; un segundo juez sí.
+CLASES_DUDOSAS = frozenset({"FEEDBACK", "CONTACT"})
+
+
+def pide_segundo_juez(categoria: str, motivo: str, ampliada: bool = True) -> bool:
+    """Cuándo vale la pena consultar al juez remoto: ruteo por confianza baja y, en la cascada ampliada, un envío automático
+    a una clase dudosa. Inyección y riesgo legal nunca llegan aquí: ya van a humano con otro motivo y no deben salir."""
+    return motivo == "confianza baja" or (ampliada and motivo == "auto" and categoria in CLASES_DUDOSAS)
+
+
 def es_sospechoso(mensaje: str) -> bool:
     """A cola humana si parece prompt injection o trae caracteres invisibles (la forma típica de evadir el patrón)."""
     return bool({"prompt_injection", "unicode_invisible"} & set(hallazgos(mensaje)))
