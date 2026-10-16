@@ -140,7 +140,24 @@ Formato: contexto → decisión → por qué → qué cuesta → cómo se verifi
   de datos a un tercero. Sigue siendo una muestra de 85 casos escritos por nosotros; DeepSeek no se repite.
 - **Verificación.** `evals/evaluar.py`, escenarios de producción y `evals/test_evals.py`.
 
-## 9. Decisiones menores relacionadas
+## 9. Cascada: Ollama decide y TypeSafe solo desempata las dudas
+
+- **Contexto.** TypeSafe iguala o supera a Ollama en exactitud pero es 5× más lento, cuesta y recibe datos de clientes.
+  Ollama solo duda ("confianza baja") en una minoría de casos.
+- **Decisión.** `JEV_SEGUNDO=typesafe` activa un segundo juez en `router_api`: se consulta únicamente cuando el ruteo local
+  sería "confianza baja", con el mensaje anonimizado y el mismo umbral. Nunca para inyección ni riesgo legal (ya van a
+  humano y no deben salir). Si el servicio falla o el cupo (`JEV_SEGUNDO_MAX`, 200 por proceso) se agota, queda la decisión
+  local. La respuesta añade `juez` (`local`|`typesafe`) para auditar quién decidió.
+- **Medido offline sobre golden-v3** (`evals/evaluar.py --cascada`, predicciones ya grabadas): consulta al remoto en
+  13 % de las decisiones; exactitud 98.6 %, 74.0 % automatizado, 0 críticos a automático, destino 98.7 %, mediana 70 ms
+  (p95 422), ~USD 0.003 por 1,000 decisiones (precio de lista; verifica tu plan). Solo diverge `otro-08`: un error con
+  confianza alta del local, que una cascada por baja confianza no puede detectar.
+- **Cuesta.** Dos dependencias de configuración; el cupo se reinicia con el proceso (el tope real se fija en la consola del
+  proveedor); sigue enviándose a un tercero ~13 % del tráfico anonimizado. Muestra de 85 casos propios, sin tráfico real.
+- **Verificación.** `servicios/test_escenarios.py` (solo cuando duda, nunca inyección/legal/PII, cupo, juez caído) con dos
+  mutaciones comprobadas.
+
+## 10. Decisiones menores relacionadas
 
 - **Reembolso: el LLM propone, el humano aprueba los argumentos exactos, el código ejecuta** (`proto_aprobacion.py`),
   con política de montos en código (`MAX_REEMBOLSO`) y operación idempotente. Aprobación humana no sustituye política.

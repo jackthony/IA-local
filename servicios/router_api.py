@@ -23,6 +23,7 @@ configurar("router-api")
 from evaluar_empresa import anonimizar  # noqa: E402
 from jev import Choice, Jev, decidir as decidir_jev, distribucion, etiquetas  # noqa: E402
 from openai import OpenAIError  # noqa: E402
+from typesafe import TypeSafeError, TypeSafeJev  # noqa: E402
 
 r10 = importlib.import_module("10_router_jev")
 TOKEN = token_requerido("API_TOKEN")
@@ -32,6 +33,26 @@ TIPO = Choice(tuple(CAL["opciones"]), tuple(CAL["descripciones"]) if CAL.get("de
 # Una decisión tarda ~1 s: esperar más es una caída. Sin reintentos ocultos; el cliente decide si reintenta.
 JEV = Jev(CAL["modelo"], t=CAL["T"], rotulo=CAL["rotulo"], timeout=float(os.getenv("JEV_TIMEOUT_S", "10")), reintentos=0)
 tracer = trace.get_tracer("router-api")
+
+
+class Cupo:
+    """Tope de consultas al juez remoto por proceso (se reinicia al reiniciar). Es un freno de gasto, no un límite de
+    facturación: el tope real se fija también en la consola del proveedor."""
+
+    def __init__(self, maximo: int) -> None:
+        self.maximo, self.usadas = maximo, 0
+
+    def tomar(self) -> bool:
+        if self.usadas >= self.maximo:
+            return False
+        self.usadas += 1
+        return True
+
+
+# Segundo juez opcional (JEV_SEGUNDO=typesafe + TYPESAFE_API_KEY): solo cuando el modelo local daría "confianza baja".
+# Nunca para inyección ni riesgo legal: esos mensajes ya van a humano y no deben salir de la máquina.
+SEGUNDO = TypeSafeJev(timeout=float(os.getenv("JEV_TIMEOUT_S", "10")), reintentos=1) if os.getenv("JEV_SEGUNDO") == "typesafe" else None
+CUPO = Cupo(int(os.getenv("JEV_SEGUNDO_MAX", "200")))
 
 
 class JevNoDisponible(Exception):
@@ -67,10 +88,19 @@ async def decidir(request: Request) -> JSONResponse:
         top2 = sorted(d.probs, key=d.probs.get, reverse=True)[:2]
         destino, motivo = r10.decidir_ruta(d.valor, d.confianza, CAL["umbrales"]["0.05"], r10.ESPECIALISTAS,
                                            sospechoso=r10.es_sospechoso(msg), riesgoso=r10.es_riesgoso(msg))
-        span.set_attributes({"jev.categoria": d.valor, "jev.confianza": round(d.confianza, 3),
+        juez = "local"
+        if motivo == "confianza baja" and SEGUNDO is not None and CUPO.tomar():
+            try:
+                d = await SEGUNDO.preguntar(anonimizar(msg), CAL["pregunta"], TIPO)
+                top2 = sorted(d.probs, key=d.probs.get, reverse=True)[:2]
+                destino, motivo = r10.decidir_ruta(d.valor, d.confianza, CAL["umbrales"]["0.05"], r10.ESPECIALISTAS)
+                juez = "typesafe"
+            except TypeSafeError as e:  # el segundo juez es un refuerzo: si falla, queda la decisión local (a humano)
+                span.set_attribute("segundo.error", str(e))
+        span.set_attributes({"jev.juez": juez, "jev.categoria": d.valor, "jev.confianza": round(d.confianza, 3),
                              "ruta.destino": destino, "ruta.motivo": motivo})
     return JSONResponse({"categoria": d.valor, "confianza": round(d.confianza, 3), "top2": top2,
-                         "destino": destino, "motivo": motivo})
+                         "destino": destino, "motivo": motivo, "juez": juez})
 
 
 async def salud(request: Request) -> JSONResponse:

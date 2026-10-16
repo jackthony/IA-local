@@ -47,6 +47,10 @@ Se usan sus `probabilities`, no su `confidence`: esa es `(p_max - 1/n)/(1 - 1/n)
 probabilidad de acierto. El umbral de ruteo de la calibración local (0.7033) se aplica **sin recalibrar**, así que ECE y
 % automatizado de este perfil son indicativos; recalibra con datos propios antes de decidir con ellos.
 
+**Cascada** (`--cascada`): combina las predicciones grabadas de `ollama` y `typesafe` como lo hace `router_api` con
+`JEV_SEGUNDO=typesafe` (el remoto solo decide lo que el local dejaría en "confianza baja") y reporta cuánto se consulta, la
+exactitud, la automatización y el costo estimado. Define `PRECIO_ENTRADA_USD_1M` y `PRECIO_SALIDA_USD_1M` para el costo.
+
 **Control de gasto (solo nube).** `--grabar` cuenta llamadas y tokens, y corta *antes* de la llamada que pasaría un tope,
 sin dejar archivo parcial. Por defecto el tope de llamadas es el que la corrida necesita (70); ajusta con
 `GRABAR_MAX_LLAMADAS`, `GRABAR_MAX_TOKENS` y `GRABAR_MAX_USD` (este exige los precios `PRECIO_*_USD_1M`: sin ellos el gasto

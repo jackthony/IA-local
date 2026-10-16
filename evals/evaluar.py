@@ -139,6 +139,28 @@ def dist_de(p: dict, tipo: Choice, cal: dict) -> dict[str, float]:
     return distribucion([(t, lp) for t, lp in p["logprobs"]], etiquetas(tipo), cal["T"])
 
 
+def fusionar_cascada(casos: list[dict], local: dict[str, dict], remoto: dict[str, dict], cal: dict) -> tuple[dict[str, dict], int]:
+    """Predicciones de la cascada: decide el modelo local y solo si su ruteo sería 'confianza baja' (nunca inyección ni
+    riesgo legal, que ya van a humano y no deben salir) se usa la predicción del juez remoto. Devuelve (preds, consultas).
+
+    ms suma ambas latencias; tokens cuentan solo lo consultado, así que el promedio por decisión es el costo real.
+    """
+    tipo = Choice(tuple(cal["opciones"]), tuple(cal["descripciones"]) if cal.get("descripciones") else None)
+    umbral, fusion, consultas = cal["umbrales"]["0.05"], {}, 0
+    for c in (c for c in casos if c["tipo"] == "ruteo"):
+        p = local[c["id"]]
+        d = decidir(tipo, dist_de(p, tipo, cal))
+        _, motivo = r10.decidir_ruta(d.valor, d.confianza, umbral, r10.ESPECIALISTAS, r10.es_sospechoso(c["mensaje"]),
+                                     r10.es_riesgoso(c["mensaje"]))
+        if motivo == "confianza baja" and c["id"] in remoto:
+            r = remoto[c["id"]]
+            fusion[c["id"]] = {**r, "ms": p["ms"] + r["ms"]}
+            consultas += 1
+        else:
+            fusion[c["id"]] = {**p, "tokens_in": 0, "tokens_out": 0}
+    return fusion, consultas
+
+
 def destino_esperado(caso: dict) -> str:
     return r10.ESPECIALISTAS[caso["esperado"]] if caso["destino_esperado"] == "auto" else "humano"
 
@@ -403,6 +425,7 @@ def main() -> int:
     ap.add_argument("--perfil", choices=PERFILES, default="ollama")
     ap.add_argument("--grabar", action="store_true", help="llama a Jev en vivo y guarda las predicciones")
     ap.add_argument("--comparar", action="store_true", help="tabla entre perfiles con predicciones grabadas")
+    ap.add_argument("--cascada", action="store_true", help="mide local + juez remoto (typesafe) con predicciones grabadas")
     ap.add_argument("--golden", type=Path, default=GOLDEN)
     ap.add_argument("--umbrales", type=Path, default=UMBRALES)
     a = ap.parse_args()
@@ -416,6 +439,21 @@ def main() -> int:
             print(f"ABORTADO sin guardar: {e}", file=sys.stderr)
             return 2
     golden_sha, precios = sha256(a.golden), precios_env()
+    if a.cascada:
+        _, local = cargar_predicciones(ruta_predicciones("ollama", a.golden))
+        meta_r, remoto = cargar_predicciones(ruta_predicciones("typesafe", a.golden))
+        fusion, consultas = fusionar_cascada(casos, local, remoto, cal)
+        m = evaluar(casos, fusion, cal, meta_r, precios)
+        n = m["n"]["ruteo"]
+        print(f"cascada ollama -> typesafe: consulta al remoto en {consultas}/{n} decisiones ({consultas / n:.1%})")
+        print(f"exactitud {m['exactitud_global']:.1%} | ECE {m['ece']:.3f} | automatizado {m['pct_automatizado']:.1%} | "
+              f"críticos a automático {len(m['criticos']['mal_a_automatico'])} | destino {m['exactitud_destino']:.1%} | "
+              f"latencia mediana/p95 {m['latencia_ms']['mediana']}/{m['latencia_ms']['p95']} ms | "
+              f"tokens remotos por decisión {m['tokens_por_decision']['entrada']:.0f}/{m['tokens_por_decision']['salida']:.0f} | "
+              f"costo por 1,000: {m['costo_por_1000_usd']}")
+        for x in m["divergencias_destino"]:
+            print(f"  divergencia {x['id']}: esperado {x['esperado']}, real {x['destino']} [{x['motivo']}]")
+        return 0
     if a.comparar:
         res = {p: calcular_perfil(p, casos, golden_sha, cal, a.golden, precios) for p in PERFILES}
         md = tabla(res)

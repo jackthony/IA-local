@@ -44,6 +44,38 @@ if not VIVO:
     os.environ["LLM_BASE_URL"] = FALSO.url
     os.environ["LLM_API_KEY"] = "falsa"
 os.environ["API_TOKEN"] = TOKEN
+if not VIVO:  # segundo juez (cascada) contra un servicio TypeSafe falso; los escenarios lo activan solo cuando lo prueban
+    import json as _json
+    import threading
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+    class TypeSafeFalso(BaseHTTPRequestHandler):
+        recibidas: list[str] = []
+        caido = False
+
+        def log_message(self, *a):
+            pass
+
+        def do_POST(self):
+            cuerpo = _json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            type(self).recibidas.append(cuerpo["state"])
+            opciones = list(cuerpo["questions"]["categoria"]["criteria"])
+            gana = ESPERADOS.get(cuerpo["state"]) or opciones[0]
+            probs = {o: (0.95 if o == gana else 0.05 / (len(opciones) - 1)) for o in opciones}
+            codigo, datos = (500, {"error": "caído"}) if type(self).caido else (200, {
+                "model": "jev-falso", "answers": {"categoria": {"type": "choice", "choice": gana, "probabilities": probs}},
+                "usage": {"input_tokens": 500, "output_tokens": 100}})
+            crudo = _json.dumps(datos).encode()
+            self.send_response(codigo)
+            self.send_header("Content-Length", str(len(crudo)))
+            self.end_headers()
+            self.wfile.write(crudo)
+
+    ESPERADOS = {ev.anonimizar(c["mensaje"]): c["esperado"] for c in CASOS if c["esperado"]}
+    _ts = ThreadingHTTPServer(("127.0.0.1", 0), TypeSafeFalso)
+    threading.Thread(target=_ts.serve_forever, daemon=True).start()
+    os.environ.update({"JEV_SEGUNDO": "typesafe", "TYPESAFE_API_KEY": "clave-falsa-de-prueba-0123456789",
+                       "TYPESAFE_URL": f"http://127.0.0.1:{_ts.server_port}/v1/systemone"})
 if not VIVO:
     os.environ["JEV_TIMEOUT_S"] = "0.3"  # el servicio corta antes de que el modelo lento responda
 os.environ.pop("OTEL_EXPORTER_OTLP_ENDPOINT", None)
@@ -62,6 +94,7 @@ import router_api  # noqa: E402
 
 # Un solo event loop para todo el recorrido, como en uvicorn: sin contexto, TestClient abre un loop por petición y las
 # conexiones keep-alive del cliente HTTP del modelo quedan atadas a un loop cerrado (falla con un servidor real).
+SEGUNDO_CONFIGURADO, router_api.SEGUNDO = router_api.SEGUNDO, None  # apagado por defecto: el golden mide solo el modelo local
 CLIENTE = TestClient(router_api.app, raise_server_exceptions=False).__enter__()
 
 
@@ -164,6 +197,65 @@ def test_modelo_lento_agota_el_tiempo() -> None:
     assert time.perf_counter() - t0 < 0.95, "el plazo no cortó la espera"
 
 
+def con_segundo(maximo: int = 1000):
+    """Activa el segundo juez para un escenario, con su cupo y su servicio falso reiniciados."""
+    class Ctx:
+        def __enter__(self):
+            TypeSafeFalso.recibidas.clear()
+            TypeSafeFalso.caido = False
+            router_api.SEGUNDO, router_api.CUPO = SEGUNDO_CONFIGURADO, router_api.Cupo(maximo)
+
+        def __exit__(self, *a):
+            router_api.SEGUNDO = None
+            TypeSafeFalso.caido = False
+    return Ctx()
+
+
+def caso(id_: str) -> dict:
+    return next(c for c in CASOS if c["id"] == id_)
+
+
+@solo_simulado
+def test_cascada_consulta_solo_cuando_el_local_duda() -> None:
+    dudoso, seguro = caso("order-04"), caso("account-02")
+    assert decidir(dudoso["mensaje"]).json()["destino"] == "humano"  # el local solo lo manda a humano por confianza baja
+    with con_segundo():
+        d = decidir(dudoso["mensaje"]).json()
+        assert (d["juez"], d["destino"], d["categoria"]) == ("typesafe", "pedidos", "ORDER"), d
+        d = decidir(seguro["mensaje"]).json()
+        assert d["juez"] == "local" and d["destino"] == "cuenta", d
+        assert TypeSafeFalso.recibidas == [ev.anonimizar(dudoso["mensaje"])], "solo el caso dudoso debía salir"
+
+
+@solo_simulado
+def test_cascada_nunca_envia_inyeccion_ni_riesgo_legal_ni_pii() -> None:
+    with con_segundo():
+        for c in (caso("inyeccion-01"), caso("ambiguo-06")):
+            d = decidir(c["mensaje"]).json()
+            assert d["destino"] == "humano" and d["juez"] == "local", (c["id"], d)
+        decidir("Quiero cambiar mis cosas del pedido, mi correo es ana@acme.pe")
+        assert all("ana@acme.pe" not in x for x in TypeSafeFalso.recibidas), "PII enviada al segundo juez"
+        assert not any("Ignore all previous" in x or "sue you" in x for x in TypeSafeFalso.recibidas)
+
+
+@solo_simulado
+def test_cascada_cupo_agotado_vuelve_al_local() -> None:
+    dudoso = caso("order-04")
+    with con_segundo(maximo=1):
+        assert decidir(dudoso["mensaje"]).json()["juez"] == "typesafe"
+        d = decidir(dudoso["mensaje"]).json()
+        assert (d["juez"], d["destino"]) == ("local", "humano"), d
+        assert len(TypeSafeFalso.recibidas) == 1, "el cupo no cortó el gasto"
+
+
+@solo_simulado
+def test_cascada_juez_caido_queda_la_decision_local() -> None:
+    with con_segundo():
+        TypeSafeFalso.caido = True
+        r = decidir(caso("order-04")["mensaje"])
+        assert r.status_code == 200 and (r.json()["juez"], r.json()["destino"]) == ("local", "humano"), r.text
+
+
 def test_telemetria_sin_contenido() -> None:
     SPANS.clear()
     mensaje = "Mi correo es secreto-ana@acme.pe y quiero un reembolso"
@@ -177,7 +269,9 @@ def test_telemetria_sin_contenido() -> None:
 
 PRUEBAS = [test_golden_por_http, test_criticos_nunca_a_automatico, test_motivos_de_humano, test_pii_no_llega_al_modelo,
            test_sin_token_no_toca_el_modelo, test_modelo_caido_falla_cerrado, test_respuesta_vacia_del_modelo_falla_cerrado,
-           test_modelo_lento_agota_el_tiempo, test_telemetria_sin_contenido]
+           test_modelo_lento_agota_el_tiempo, test_cascada_consulta_solo_cuando_el_local_duda,
+           test_cascada_nunca_envia_inyeccion_ni_riesgo_legal_ni_pii, test_cascada_cupo_agotado_vuelve_al_local,
+           test_cascada_juez_caido_queda_la_decision_local, test_telemetria_sin_contenido]
 
 if __name__ == "__main__":
     for prueba in PRUEBAS:
