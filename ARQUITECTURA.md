@@ -8,6 +8,8 @@ IA-local/
 ├── labs/        11 patrones de agentes (01 tools … 11 aprobación humana) + common.py + empresa.py
 ├── jev/         Decisiones tipadas con probabilidad calibrada (System 1): núcleo, ingesta, evaluación
 ├── servicios/   Producción: router-api, a2a-divisas, mcp-empresa (+ seguridad, telemetría)
+├── evals/       Golden sets, umbrales de CI, perfiles de modelo, cascada y conversor de tickets reales
+├── perfiles/    Variables de entorno por proveedor (ollama, deepseek, typesafe), solo ejemplos
 ├── scripts/     Escáner de secretos, generador de .env, inventario
 ├── experimentos/ Cómo se descubrió cada decisión (prototipos y mediciones)
 ├── openspec/    Specs vigentes (openspec/specs) e historial de cambios (openspec/changes/archive)
@@ -22,7 +24,9 @@ IA-local/
 flowchart LR
     C[Cliente / ticket] -->|Bearer API_TOKEN| R[router-api<br/>Jev: 1 token, ~0.5-1 s]
     R -->|confianza >= umbral| E[Agentes especialistas<br/>System 2]
-    R -->|duda o prompt injection| H[Cola humana<br/>request_info + checkpoint HMAC]
+    R -.->|duda o FEEDBACK/CONTACT<br/>opcional, JEV_SEGUNDO| S[Segundo juez<br/>TypeSafe, con cupo]
+    S -.->|decide o devuelve| R
+    R -->|duda, OTRO o prompt injection| H[Cola humana<br/>request_info + checkpoint HMAC]
     H -->|decisión| E
     E -->|acción sensible| A[Aprobación humana<br/>argumentos exactos]
     A -->|aprobado + política en código| X[Ejecutar tool]
@@ -31,6 +35,11 @@ flowchart LR
     R & E & D -.->|LLM_BASE_URL| O[(Ollama en el host<br/>Metal en Mac)]
     R & D & M -.->|OTLP sin contenido| J[Jaeger]
 ```
+
+**Cascada (opcional).** Con `JEV_SEGUNDO=typesafe` el router consulta a un segundo juez remoto solo cuando el
+modelo local duda o enviaría a `FEEDBACK`/`CONTACT` (`JEV_SEGUNDO_AMPLIADO=0` deja solo la duda). Nunca consulta
+inyección, riesgo legal ni PII; el mensaje va anonimizado y con cupo (`JEV_SEGUNDO_MAX`). Detalle y mediciones en
+`DECISIONES.md` §9 y §13. La clase `OTRO` (fuera de dominio) no tiene especialista: va a humano (§8).
 
 Principio que atraviesa todo: **la estructura y las decisiones de riesgo viven en código; el LLM aporta
 contenido**. Cada vez que se dejó algo al prompt (turnos, términos, "no inventes", "usa la tool") falló
@@ -49,6 +58,7 @@ con modelos chicos, y se movió a código (selector, `ExigeTool`, `umbral_auto`,
 | Sistemas compartidos | MCP con mínimo privilegio (08-09) | ~45 s | Restringir tools no restringe al modelo |
 | Clasificar / rutear rápido | **Jev** (jev/, 10) | **0.5-1 s** | Calibrar; el prompt es un hiperparámetro |
 | Humano en el circuito | HITL reanudable (11) | + tiempo humano | Checkpoints con pickle → sellar |
+| Medir el router | `evals/` (golden, hold-out, cascada) | sin LLM en CI | El golden propio es optimista (DECISIONES §10, §14) |
 
 ## Credenciales: qué existe, dónde vive y qué nunca va a git
 
@@ -61,7 +71,9 @@ con modelos chicos, y se movió a código (selector, `ExigeTool`, `umbral_auto`,
 
 Nunca en el repo: `.env`, claves, tokens de cuentas, el estado de ejecución (`data/hitl/`, logs,
 correcciones). El CI bloquea tokens con patrones conocidos (`scripts/escanear_secretos.py`).
-No se usan APIs de pago ni claves de nube: todo corre local.
+Por defecto todo corre local y no hace falta ninguna clave de nube. Las claves de proveedores son **opcionales**
+(`LLM_API_KEY` de DeepSeek y `TYPESAFE_API_KEY`, en un archivo fuera del repo, ver `perfiles/*.env.example`) y solo se usan para
+medir con `--perfil` o activar la cascada; envían texto anonimizado a un tercero.
 
 ## Orden en la Mac: un solo almacén de modelos para todos tus proyectos
 
@@ -126,5 +138,6 @@ Cómo adoptarlos sin adivinar (el método de todo el proyecto):
 2. Labs 06 → 09 (conversación entre agentes, Magentic, MCP) — dónde fallan los modelos chicos.
 3. `jev/README.md` + `experimentos/` — medir en vez de suponer; calibración; diagnóstico de datos.
 4. Labs 10 → 11 — System 1 + System 2 + humano; seguridad en profundidad.
-5. `servicios/` + `compose.yaml` — producción: auth entre servicios, contenedores endurecidos, trazas.
-6. `openspec/` — cada cambio empezó como spec con escenarios verificables y terminó con un test.
+5. `evals/README.md` + `DECISIONES.md` §8-§14 — medir el router fuera del golden propio y decidir con datos.
+6. `servicios/` + `compose.yaml` — producción: auth entre servicios, contenedores endurecidos, trazas.
+7. `openspec/` — cada cambio empezó como spec con escenarios verificables y terminó con un test.

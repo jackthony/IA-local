@@ -57,10 +57,10 @@ No sirve para: redactar respuestas, razonamiento multi-paso, tareas abiertas (ah
 ## Seguridad (zero trust)
 
 - Código propio; ningún repo de terceros clonado. Única dependencia: SDK oficial `openai` (en `uv.lock` con hashes).
-- `auditar_deps.py`: 60 paquetes del lock contra OSV → sin CVEs ni paquetes maliciosos (verificado que detecta
+- `auditar_deps.py`: los paquetes del lock contra OSV → sin CVEs ni paquetes maliciosos (verificado que detecta
   casos conocidos: torch 2.0.0 → 28 avisos).
 - Los datos no salen de la máquina (Ollama local). En prod: mismo código contra vLLM on-prem (`LLM_BASE_URL`).
-- Alternativas open source auditadas en remoto (Kev, AnyJev): ver resumen en el README raíz.
+- Alternativas open source auditadas en remoto (Kev, AnyJev): ver resumen en el [README raíz](../README.md#auditoría-zero-trust-de-alternativas-open-source-a-jev).
 
 ## Evaluación con dataset de Kaggle (zero trust)
 
@@ -158,6 +158,27 @@ reporta posibles prompt injection; la salida solo muestra métricas agregadas, n
 artefacto `data/calibracion-<nombre>.json` guarda T, umbrales y el SHA-256 del CSV de origen.
 
 Prueba con Bitext como sustituto: 95 % de exactitud, ECE 0.017, automatiza 97 % con 96 % a error objetivo 5 %.
+
+## Jev alojado de TypeSafe y segundo juez (`jev/typesafe.py`)
+
+Cliente mínimo (solo `httpx`) del servicio alojado `POST /v1/systemone`, con el mismo contrato que `Jev.preguntar`
+(solo `Choice`). Usa las `probabilities` del servicio, no su `confidence` (una medida de dispersión), y el umbral local
+se aplica sin recalibrar. La clave sale de `TYPESAFE_API_KEY` y nunca se imprime. Se usa de dos formas:
+
+- **Medición:** `uv run python evals/evaluar.py --perfil typesafe --grabar` (ver [evals/README.md](../evals/README.md)).
+- **Segundo juez del router:** `JEV_SEGUNDO=typesafe` en `router-api`; solo desempata dudas, con el mensaje anonimizado y
+  cupo de consultas (`DECISIONES.md` §9 y §13).
+
+## Qué cambió desde estas mediciones
+
+Los números de Kaggle y Bitext de arriba son de 2026-09 con 11 clases. Después se añadió la clase `OTRO` (fuera de dominio),
+se recalibró con 40 ejemplos por clase y se midió fuera del golden propio:
+
+- **El 95 % de Bitext no transfiere.** Sobre un hold-out independiente (240 casos) y sobre consultas de otro rubro
+  (Banking77, 300 casos) la exactitud dentro de lo automatizado queda en 87-92 %, no en el 95 % de error objetivo
+  (`DECISIONES.md` §10, §12 y §14). Calibra con tickets de tu canal antes de confiar en el umbral.
+- **Calibración vigente:** `data/calibracion-bitext-otro.json` (T = 6.5, umbral al 5 % de error = 0.88).
+- **Datos propios:** `evals/csv_a_golden.py` convierte tickets reales en un golden privado (ignorado por git).
 
 ## Límites conocidos
 
